@@ -16,7 +16,7 @@ class User(AbstractUser):
 class BaseModel(models.Model):
     created_date = models.DateField(auto_now_add=True)
     updated_date = models.DateField(auto_now=True)
-    active = models.BooleanField(default=True)
+    #active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
@@ -26,9 +26,20 @@ class BaseModel(models.Model):
 class Patient(User):
     avatar = CloudinaryField('avatar', null=False)
 
-class ShiftSchedule():
-    pass
+class ShiftSchedule(BaseModel):
+    staff = models.ForeignKey('Staff', on_delete=models.CASCADE)
+    shift_date = models.DateField()
+    shift_start_time = models.TimeField()
+    shift_end_time = models.TimeField()
 
 
 class Staff(User):
+    pass
+
+
+class Doctor(Staff):
+    pass
+
+
+class Nurse(Staff):
     pass
