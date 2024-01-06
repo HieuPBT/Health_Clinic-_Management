@@ -51,8 +51,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'healthclinic.apps.HealthclinicConfig',
+    'rest_framework',
+    'cloudinary',
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -83,14 +84,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'healthclinicapp.wsgi.application'
 
-
+import pymysql
+pymysql.install_as_MySQLdb()
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'healclinicdb',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'healthclinicdb',
         'USER': 'root',
         'PASSWORD': 'Admin@123',
         'HOST': '' #mặc định local host
