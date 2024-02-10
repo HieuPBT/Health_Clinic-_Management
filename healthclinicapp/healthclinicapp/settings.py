@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-AUTH_USER_MODEL = 'healthclinic.User'
+AUTH_USER_MODEL = 'healthclinic.CustomUser'
 
 #cloudinary
 
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'healthclinic.apps.HealthclinicConfig',
     'rest_framework',
     'cloudinary',
+    'drf_yasg',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -142,3 +143,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DATE_FORMAT = "d/m/Y"
+
+# default pagination
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 5
+}

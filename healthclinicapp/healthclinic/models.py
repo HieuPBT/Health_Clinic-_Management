@@ -1,76 +1,63 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, AbstractUser
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from cloudinary.models import CloudinaryField
+from .managers import CustomUserManager
+from .choices import Role, Gender, Department
 
 from healthclinicapp import settings
 
 # Create your models here.
-"""
-UserManager has two method to create user, regular user - create_user(), super user - create_superuser()
-We extend create_user() method to create super user, patient, nurse, doctor, etc
-Class CustomUserManager only has method, no fields
-"""
-
-
-class CustomUserManager(BaseUserManager):
-    # using email/password to login instead of username/password
-    def create_user(self, email, password, **other_fields):
-        if not email:
-            raise ValueError(_("An email is required."))
-        if not password:
-            raise ValueError(_("A password is required."))
-
-        # normalize and lower before save to db, exp abc@gmail.com == aBC@gMail.com
-        email = self.normalize_email(email)
-        email = email.lower()
-
-        user = self.model(email=email, **other_fields)
-        user.set_password(password)
-        user.save()
-        return user
-
-    def create_superuser(self, email=None, password=None):
-        user = self.create_user(email, password)
-        user.is_superuser = True
-        user.is_staff = True
-        user.set_password(password)
-        user.save()
-        return user
-
 
 """
 PATIENT, ADMIN, NURSE, DOCTOR -> all are USER
-They can be can be distinguish by their role, groups they belong to and permissions
+They can be can be distinguish by their role, groups and permissions
 Using Role(ADMIN, PATIENT, DOCTOR, NURSE) to assign to user when they are created
 Using email as username to login
 """
 
 
-class Role(models.TextChoices):
-    ADMIN = "ADMIN", _("Admin")
-    PATIENT = "PATIENT", _("Patient")
-    DOCTOR = "DOCTOR", _("Doctor")
-    NURSE = "NURSE", _("Nurse")
-
-
-class User(AbstractUser):
-    username = None # not using username
-    email = models.EmailField(_('email address'), unique=True) # using email for authentication
-    phone_number = models.CharField(max_length=11, null=True, blank=True)
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(_('email'), max_length=100, unique=True) # using email instead of username
+    full_name = models.CharField(_('full name'), max_length=100, blank=True, null=True)
+    role = models.CharField(_('role'), max_length=50, choices=Role.choices, default=Role.PATIENT) # default role=Patient
+    avatar = CloudinaryField(_('avatar'), blank=True, null=True)
+    gender = models.CharField(_('gender'), max_length=50, choices=Gender.choices, default=Gender.MALE) # default gender=Male
     date_of_birth = models.DateField(blank=True, null=True)
-    sex = models.CharField(max_length=10, blank=True, null=True)
-    avatar = CloudinaryField('avatar', null=True, blank=True)
-    role = models.CharField(_('role'), max_length=50, choices=Role.choices, default=Role.PATIENT)
+    phone_number = models.CharField(max_length=11, blank=True, null=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
 
-    USERNAME_FIELD = 'email'  # using email to login
-    REQUIRED_FIELDS = []  # require when create superuser
+    is_active = models.BooleanField(default=True, help_text=_("Designates whether the user can log into this admin site."),)
+    is_staff = models.BooleanField(default=False, help_text=_(
+            "Designates whether this user should be treated as active. "
+            "Unselect this instead of deleting accounts."
+        ),) # indicate whether user can log in admin site
+    date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
+
+    USERNAME_FIELD = 'email' # using email to login
+    REQUIRED_FIELDS = [] # require when create superuser
 
     objects = CustomUserManager()
 
     def __str__(self):
         return self.email
+
+
+class Patient(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    health_insurance = models.CharField(max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        return self.user.email
+
+
+class Employee(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    Department = models.CharField(max_length=100, choices=Department.choices, default=Department.COSMETIC)
+
+    def __str__(self):
+        return self.user.email
 
 
 class BaseModel(models.Model):
@@ -82,17 +69,10 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Patient(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+class Appointment(BaseModel):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    department = models.CharField(max_length=100, choices=Department.choices, default=Department.COSMETIC)
+    booking_date = models.DateTimeField()
+    is_confirm = models.BooleanField(default=False)
 
-    def __str__(self):
-        return self.user.email
-
-
-class Employee(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    address = models.CharField(max_length=255, null=True, blank=True)
-
-    def __str__(self):
-        return self.user.email
 
