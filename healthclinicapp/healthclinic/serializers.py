@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Patient, Employee
+from .models import CustomUser, Patient, Employee, Appointment
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,3 +26,14 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = '__all__'
+
+
+class AppointmentConfirmSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = ['is_confirm', 'confirmed_by']

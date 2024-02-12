@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField, UserCreationForm, UserChangeForm
-from healthclinic.models import CustomUser
+from healthclinic.models import CustomUser, Appointment
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -14,6 +14,25 @@ class CustomUserChangeForm(UserChangeForm):
         model = CustomUser
         fields = ('email',)
 
+
+class AppointmentForm(UserCreationForm):
+    class Meta:
+        model = Appointment
+        fields = ['booking_date', 'booking_time']  # Thêm các trường khác nếu cần
+
+    def clean_booking_time(self):
+        booking_date = self.cleaned_data.get('booking_date')
+        booking_time = self.cleaned_data.get('booking_time')
+
+        if booking_date and booking_time:
+            # Tính số lượng bệnh nhân đã đặt lịch cho time slot
+            num_appointments = Appointment.objects.filter(booking_date=booking_date, booking_time=booking_time).count()
+
+            # Kiểm tra số lượng bệnh nhân đã đặt lịch
+            if num_appointments >= 3:
+                raise forms.ValidationError("Số lượng bệnh nhân đã đặt lịch cho time slot này đã đạt tới giới hạn.")
+
+        return booking_time
 """
 class UserCreationForm2():
     A form for creating new users. Includes all the required

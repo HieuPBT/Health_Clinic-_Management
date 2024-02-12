@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.safestring import mark_safe
-from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import CustomUser, Patient, Employee
+from .forms import CustomUserChangeForm, CustomUserCreationForm, AppointmentForm
+from .models import CustomUser, Patient, Employee, Appointment
 # Register your models here.
 
 
@@ -14,7 +14,7 @@ class UserAdmin(BaseUserAdmin):
     # The fields to be used in displaying the User model.
     # These override the definitions on the base UserAdmin
     # that reference specific fields on auth.User.
-    list_display = ('id','email', 'role','last_login', 'date_joined')
+    list_display = ('id', 'email', 'role', 'last_login', 'date_joined')
     list_filter = ('id', 'email', 'role')
     fieldsets = (
         (None, {'fields': ('email', 'password', 'role')}),
@@ -46,6 +46,17 @@ class PatientAdmin(admin.ModelAdmin):
             )
 
 
+class AppointmentAdmin(admin.ModelAdmin):
+    add_form = AppointmentForm
+    fieldsets = (
+        (None, {'fields': ('patient', 'department', 'booking_date', 'booking_time', 'is_confirm', 'confirmed_by')}),
+    )
+    add_fieldsets = (
+        (None, {'fields': ('patient', 'department', 'booking_date', 'booking_time', 'is_confirm', 'confirmed_by')}),
+    )
+
+
 admin.site.register(CustomUser, UserAdmin)
 admin.site.register(Patient)
 admin.site.register(Employee)
+admin.site.register(Appointment, AppointmentAdmin)

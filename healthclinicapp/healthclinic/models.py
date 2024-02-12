@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Abstr
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from cloudinary.models import CloudinaryField
+from rest_framework.exceptions import ValidationError
+
 from .managers import CustomUserManager
 from .choices import Role, Gender, Department
 
@@ -70,9 +72,44 @@ class BaseModel(models.Model):
 
 
 class Appointment(BaseModel):
+    TIMESLOT_LIST = (
+        (0, '07:30 – 10:30'),
+        (1, '13:00 – 16:30'),
+        (3, '18:30 – 09:30'),
+    )
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.CharField(max_length=100, choices=Department.choices, default=Department.COSMETIC)
-    booking_date = models.DateTimeField()
+    department = models.CharField(max_length=100, choices=Department.choices)
+    booking_date = models.DateField(help_text="YY-MM-DD")
+    booking_time = models.IntegerField(choices=TIMESLOT_LIST)
     is_confirm = models.BooleanField(default=False)
+    confirmed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        unique_together = ['patient', 'booking_date', 'booking_time']
+
+    def __str__(self):
+        return self.department
+
+    # def confirm_appointment(self, confirmed_by):
+    #     # Xác nhận cuộc hẹn
+    #     self.is_confirm = True
+    #     self.confirmed_by = confirmed_by
+    #     self.save()
+
+    # def available_time_slots(cls, booking_date):
+    #     # Tạo một danh sách chứa tất cả các time slot cho một ngày nhất định
+    #     time_slots = [choice[0] for choice in cls.TIMESLOT_LIST]
+    #
+    #     # Lấy số lượng bệnh nhân đã đặt lịch cho từng time slot trong ngày
+    #     slot_counts = cls.objects.filter(booking_date=booking_date).values('booking_time').annotate(count=models.Count('booking_time'))
+    #
+    #     # Tạo một danh sách chứa các time slot đã đặt lịch
+    #     booked_slots = [slot['booking_time'] for slot in slot_counts if slot['count'] >= 25]
+    #
+    #     # Loại bỏ các time slot đã đặt lịch khỏi danh sách
+    #     available_slots = [slot for slot in time_slots if slot not in booked_slots]
+    #
+    #     return available_slots
+
 
 
