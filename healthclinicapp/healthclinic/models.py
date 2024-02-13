@@ -89,27 +89,3 @@ class Appointment(BaseModel):
 
     def __str__(self):
         return self.department
-
-    # def confirm_appointment(self, confirmed_by):
-    #     # Xác nhận cuộc hẹn
-    #     self.is_confirm = True
-    #     self.confirmed_by = confirmed_by
-    #     self.save()
-
-    # def available_time_slots(cls, booking_date):
-    #     # Tạo một danh sách chứa tất cả các time slot cho một ngày nhất định
-    #     time_slots = [choice[0] for choice in cls.TIMESLOT_LIST]
-    #
-    #     # Lấy số lượng bệnh nhân đã đặt lịch cho từng time slot trong ngày
-    #     slot_counts = cls.objects.filter(booking_date=booking_date).values('booking_time').annotate(count=models.Count('booking_time'))
-    #
-    #     # Tạo một danh sách chứa các time slot đã đặt lịch
-    #     booked_slots = [slot['booking_time'] for slot in slot_counts if slot['count'] >= 25]
-    #
-    #     # Loại bỏ các time slot đã đặt lịch khỏi danh sách
-    #     available_slots = [slot for slot in time_slots if slot not in booked_slots]
-    #
-    #     return available_slots
-
-
-
