@@ -77,12 +77,12 @@ class Appointment(BaseModel):
         (1, '13:00 – 16:30'),
         (3, '18:30 – 09:30'),
     )
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    patient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='patient_appointment')
     department = models.CharField(max_length=100, choices=Department.choices)
     booking_date = models.DateField(help_text="YY-MM-DD")
     booking_time = models.IntegerField(choices=TIMESLOT_LIST)
     is_confirm = models.BooleanField(default=False)
-    confirmed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    confirmed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='nurse_confirm')
 
     class Meta:
         unique_together = ['patient', 'booking_date', 'booking_time']

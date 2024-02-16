@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'cloudinary',
     'drf_yasg',
+    'oauth2_provider',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -144,8 +145,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DATE_FORMAT = "d/m/Y"
 
-# default pagination
+
 REST_FRAMEWORK = {
+    # default pagination
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 5
+    'PAGE_SIZE': 5,
+    # oauth2
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
 }
+
+CLIENT_ID = 'msSsFbg460f3856deN3CNgd9d56mLT7AlIXXwJ9e'
+
+CLIENT_SECRET = 'ZXGWVyFYhefqTc38wHO0LXPI4HrZ6Wp2Bno50bLhX3Vl7BPsM84QDNbe19soRyEXdT3M2x7DaIX4A3WS9KZCJnz7kN5JzmwZrmKGEixRsfmqIuj1Bry7k1hbMUBywZLl'
+

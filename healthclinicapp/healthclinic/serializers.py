@@ -30,7 +30,7 @@ from .models import CustomUser, Patient, Appointment
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
-        fields = '__all__'
+        fields = ['health_insurance',]
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -38,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'password', 'date_of_birth', 'patient']
+        fields = ['email', 'password', 'avatar', 'date_of_birth', 'patient']
         #extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     def create(self, validated_data):
@@ -66,7 +66,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
     # create appointment
     class Meta:
         model = Appointment
-        fields = '__all__'
+        exclude = ['patient', 'is_confirm', 'confirmed_by']  # Loại bỏ trường 'patient' từ trường fields
+
+    # def create(self, validated_data):
+    #      # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
+    #     validated_data['patient'] = self.context['request'].user
+    #     return super(by.create(validated_data)
 
 
 class AppointmentConfirmSerializer(serializers.ModelSerializer):

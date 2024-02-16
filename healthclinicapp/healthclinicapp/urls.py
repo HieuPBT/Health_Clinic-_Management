@@ -18,6 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
+    # api
     path('api/', include('healthclinic.urls')),
+    # django admin
     path('admin/', admin.site.urls),
+    # oauth2
+    path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
 ]
