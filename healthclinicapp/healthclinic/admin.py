@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.safestring import mark_safe
 from .forms import CustomUserChangeForm, CustomUserCreationForm, AppointmentForm
-from .models import CustomUser, Patient, Employee, Appointment
+from .models import CustomUser, Patient, Employee, Appointment, MedicineCategory, Medicine
 # Register your models here.
 
 
@@ -56,7 +56,23 @@ class AppointmentAdmin(admin.ModelAdmin):
     )
 
 
+class MedicineCategoryAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name']
+    search_fields = ['name']
+    list_filter = ['name']
+    ordering = ['id']
+
+
+class MedicineAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'unit', 'category']
+    search_fields = ['name', 'category__name']
+    list_filter = ['name', 'unit', 'category']
+    ordering = ['id']
+
+
 admin.site.register(CustomUser, UserAdmin)
 admin.site.register(Patient)
 admin.site.register(Employee)
 admin.site.register(Appointment, AppointmentAdmin)
+admin.site.register(Medicine, MedicineAdmin)
+admin.site.register(MedicineCategory, MedicineCategoryAdmin)

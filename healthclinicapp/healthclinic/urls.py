@@ -1,5 +1,5 @@
 from django.urls import path, include, re_path
-from healthclinic.views import AppointmentConfirm, AppointmentListCreate, UserViewSet, PatientViewSet, CurrentUserViewSet
+from healthclinic.views import AppointmentConfirm, AppointmentListCreate, UserViewSet, PatientViewSet, CurrentUserViewSet, MedicineListViewSet
 from rest_framework import routers
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -9,6 +9,7 @@ router = routers.DefaultRouter()
 router.register('user', UserViewSet)
 router.register('appointment', AppointmentListCreate, basename='appointment')
 #router.register('current_user', CurrentUserViewSet, basename='current_user')
+router.register('medicine', MedicineListViewSet, basename='medicine')
 
 
 schema_view = get_schema_view(

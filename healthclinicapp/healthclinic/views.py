@@ -4,6 +4,8 @@ from rest_framework import viewsets, generics, status, views, parsers, permissio
 from healthclinic import perms
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import django_filters
+from rest_framework import filters
 
 from healthclinic import serializers, paginators, models
 # Create your views here.
@@ -98,3 +100,21 @@ class AppointmentConfirm(generics.RetrieveUpdateDestroyAPIView):
 
     # def confirm(self, serializer):
     #     serializer.save(confirmed_by=self.request.user)
+
+
+class MedicineFilter(django_filters.FilterSet):
+    # Định nghĩa các trường mà bạn muốn cho phép lọc
+    name = django_filters.CharFilter(lookup_expr='icontains')
+    # Thêm các trường khác nếu cần
+
+    class Meta:
+        model = models.Medicine
+        fields = ['name',]  # Danh sách các trường bạn muốn lọc
+
+
+class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = models.Medicine.objects.all()
+    serializer_class = serializers.MedicineSerializer
+    permission_classes = [perms.IsDoctor]
+    filter_backends = [filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = MedicineFilter

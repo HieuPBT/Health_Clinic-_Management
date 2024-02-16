@@ -17,3 +17,12 @@ class IsNurse(BasePermission):
             # Kiểm tra vai trò của người dùng là 'NURSE' hay không
             return request.user.role == 'NURSE'
         return False
+
+
+class IsDoctor(BasePermission):
+    def has_permission(self, request, view):
+        # Kiểm tra xem người dùng đã xác thực chưa
+        if request.user.is_authenticated:
+            # Kiểm tra vai trò của người dùng là 'NURSE' hay không
+            return request.user.role == 'DOCTOR'
+        return False

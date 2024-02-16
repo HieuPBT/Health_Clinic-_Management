@@ -96,7 +96,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'healthclinicdb',
         'USER': 'root',
-        'PASSWORD': 'Admin123@',
+        'PASSWORD': 'admin@123',
         'HOST': '' #mặc định local host
     }
 }
@@ -156,7 +156,7 @@ REST_FRAMEWORK = {
     )
 }
 
-CLIENT_ID = 'msSsFbg460f3856deN3CNgd9d56mLT7AlIXXwJ9e'
+CLIENT_ID = 'QYZ6faId73t2AW23sV1sSrG7kGcG4zd2GEYqvJQF'
 
-CLIENT_SECRET = 'ZXGWVyFYhefqTc38wHO0LXPI4HrZ6Wp2Bno50bLhX3Vl7BPsM84QDNbe19soRyEXdT3M2x7DaIX4A3WS9KZCJnz7kN5JzmwZrmKGEixRsfmqIuj1Bry7k1hbMUBywZLl'
+CLIENT_SECRET = 'NReTEdzNK111E0NoDOqB8prruv3hqvbWmP7HNvnmMTPZfgEuHg25q6APBZ10aDJT9PrZE8Fuq5H6xgubMzAJbC4gzO5Pbd6cNQHPL0Lx41LVqPFnbZKDhje7mqy3P7kD'
 

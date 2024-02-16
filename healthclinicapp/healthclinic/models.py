@@ -89,3 +89,23 @@ class Appointment(BaseModel):
 
     def __str__(self):
         return self.department
+
+
+class MedicineCategory(BaseModel):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+
+class Medicine(BaseModel):
+    name = models.CharField(max_length=255, unique=True)
+    category = models.ForeignKey(MedicineCategory, on_delete=models.RESTRICT)
+    unit = models.CharField(max_length=50, null=False)
+
+    class Meta:
+        unique_together = ['name', 'category']
+
+    def __str__(self):
+        return self.name
+
