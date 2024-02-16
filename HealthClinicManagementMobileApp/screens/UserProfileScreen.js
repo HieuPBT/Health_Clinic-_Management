@@ -1,7 +1,9 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
 import Context from '../Context';
+import formatDate from '../utils/FormatDateFromYMD';
+import API, { endpoints } from '../configs/API';
 
 const fakeData = {
   email: "anekngiuenhat@gmail.com",
@@ -22,44 +24,63 @@ const renderItem = () => {
   )
 }
 
-const UserProfileScreen = ({ name=fakeData.name, phoneNumber=fakeData.phoneNumber, dateOfBirth=fakeData.dateOfBirth, gender=fakeData.gender, avatarSource=fakeData.avatarSource, healthInsurance=fakeData.healthInsurance, address=fakeData.address, email=fakeData.email, preview=false, medicalHistoryVisible=false }) => {
-  const {setAuthenticated} = useContext(Context);
+const UserProfileScreen = ({preview = false, userId, userData }) => {
+  const { setAuthenticated, accessToken, setUserData } = useContext(Context);
+  console.log(userData);
+  useEffect(()=>{
+    console.log(accessToken)
+    loadUser = async()=>{
+      const res = await API.get(endpoints['current_user'], {
+        headers: {
+          'Authorization': 'bearer ' + accessToken
+        }
+      });
+
+      setUserData(res.data);
+    }
+    if(!preview)
+      loadUser();
+  },[accessToken])
+  try {
+  } catch(ex){
+    console.error(ex);
+  }
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Thông tin người dùng</Text>
       <View style={styles.profileInfo}>
         <View style={styles.avatarContainer}>
-          {avatarSource && <Image source={{ uri: avatarSource }} style={styles.avatar} />}
-          {!avatarSource && <Text style={styles.avatarPlaceholder}>No Avatar</Text>}
+          {userData && <Image source={{ uri: userData.avatar }} style={styles.avatar} />}
+          {!userData && <Text style={styles.avatarPlaceholder}>No Avatar</Text>}
         </View>
-        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.name}>{userData.full_name}</Text>
 
         <View style={styles.wrapper}>
           <Text style={styles.label}>Số điện thoại:</Text>
-          <Text style={styles.value}>{phoneNumber}</Text>
+          <Text style={styles.value}>{userData.phone_number}</Text>
         </View>
         <View style={styles.wrapper}>
           <Text style={styles.label}>Địa chỉ email:</Text>
-          <Text style={styles.value}>{email}</Text>
+          <Text style={styles.value}>{userData.email}</Text>
         </View>
         <View style={styles.wrapper}>
           <Text style={styles.label}>Ngày sinh:</Text>
-          <Text style={styles.value}>{dateOfBirth}</Text>
+          <Text style={styles.value}>{userData.date_of_birth}</Text>
         </View>
         <View style={styles.wrapper}>
           <Text style={styles.label}>Giới tính:</Text>
-          <Text style={styles.value}>{gender}</Text>
+          <Text style={styles.value}>{userData.gender}</Text>
         </View>
-        <View style={styles.wrapper}>
+        {userData.patient?<View style={styles.wrapper}>
           <Text style={styles.label}>Số bảo hiểm y tế:</Text>
-          <Text style={styles.value}>{healthInsurance}</Text>
-        </View>
+          <Text style={styles.value}>{userData.patient.health_insurance}</Text>
+        </View>:null}
         <View style={styles.wrapper}>
           <Text style={styles.label}>Địa chỉ:</Text>
-          <Text style={styles.value}>{address}</Text>
+          <Text style={styles.value}>{userData.address}</Text>
         </View>
       </View>
-      {!preview?<CustomButton title="Đăng xuất" style={{}} onPress={()=>{setAuthenticated(false)}}/>:null}
+      {!preview ? <CustomButton title="Đăng xuất" style={{}} onPress={() => { setAuthenticated(false) }} /> : null}
     </View>
   );
 };
@@ -72,7 +93,7 @@ const styles = StyleSheet.create({
   wrapper: {
     flexDirection: 'row',
     marginTop: 25,
-    flex:0.175
+    flex: 0.175
   },
   heading: {
     fontSize: 24,
@@ -83,7 +104,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     marginBottom: 5,
-    flex:1
+    flex: 1
   },
   label: {
     fontWeight: '900',

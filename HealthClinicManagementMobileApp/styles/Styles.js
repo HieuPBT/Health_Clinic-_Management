@@ -24,4 +24,8 @@ export default StyleSheet.create({
       width: '100%',
       // padding: 10,
     },
+    toastStyle: {
+      height: 130,
+      fontSize: 18,
+    },
 });

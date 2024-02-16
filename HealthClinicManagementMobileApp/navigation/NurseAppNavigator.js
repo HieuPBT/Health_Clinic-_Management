@@ -6,6 +6,7 @@ import ConfirmAppointmentScreen from '../NurseScreens/ConfirmAppointmentScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import InvoiceScreen from '../NurseScreens/InvoiceScreen';
+import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
 
 
 
@@ -23,16 +24,19 @@ const NurseAppNavigator = () => {
 				tabBarIcon: ({ color, size }) => (
 					<Icon name="calendar" color={color} size={size} />
 				),
+				tabBarButton: CustomTabButton
 			}} />
 			<Tab.Screen name="Xuất hóa đơn" component={InvoiceScreen} options={{
 				tabBarIcon: ({ color, size }) => (
 					<Icon name="receipt" color={color} size={size} />
 				),
+				tabBarButton: CustomTabButton
 			}} />
 			<Tab.Screen name="Tài Khoản" component={UserProfileScreen} options={{
 				tabBarIcon: ({ color, size }) => (
 					<Icon name="person" color={color} size={size} />
 				),
+				tabBarButton: CustomTabButton
 			}} />
 		</Tab.Navigator>
 	);

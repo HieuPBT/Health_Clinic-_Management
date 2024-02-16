@@ -6,7 +6,7 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 import MedicalHistoryScreen from './MedicalHistoryScreen';
 import PrescriptionScreen from './PrescriptionScreen/PrescriptionScreen';
 
-const DoctorAllAppointmentScreen = () => {
+const DoctorAllAppointmentScreen = ({navigation}) => {
     const [appointments, setAppointments] = useState([
         { id: 1, date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
         { id: 2, date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
@@ -16,7 +16,6 @@ const DoctorAllAppointmentScreen = () => {
         { id: 6, date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
     ]);
     const [modalVisible, setModalVisible] = useState(false);
-    const [PrescribeModalVisible, setPrescribeModalVisible] = useState(false);
 
     const handleCancelAppointment = (id) => {
         Alert.alert(
@@ -31,7 +30,6 @@ const DoctorAllAppointmentScreen = () => {
     };
 
     const prescribing = (id) => {
-        setPrescribeModalVisible(true);
         setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
     };
 
@@ -43,33 +41,9 @@ const DoctorAllAppointmentScreen = () => {
 
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
-            <Modal
-                visible={modalVisible}
-                onRequestClose={toggleModal}
-            >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <View style={{ flex: 1, backgroundColor: 'white', padding: 10 }}>
-                        <ScrollView>
-                            <UserProfileScreen preview={true} />
-                            <MedicalHistoryScreen patientID={item.patientID} />
-                        </ScrollView>
-                        <CustomButton title={"Thoát"} onPress={toggleModal} style={{}} />
-                    </View>
-                </View>
-            </Modal>
-            <Modal
-                visible={PrescribeModalVisible}
-            >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <View style={{ flex: 1, backgroundColor: 'white', padding: 10 }}>
-                        <PrescriptionScreen />
-                        <CustomButton title={"Ra toa"} onPress={() => { setPrescribeModalVisible(false) }} style={{}} />
-                    </View>
-                </View>
-            </Modal>
             <View style={styles.row}>
                 <Text style={styles.itemText}>Bệnh nhân: </Text>
-                <TouchableOpacity onPress={() => { toggleModal() }}>
+                <TouchableOpacity onPress={() => { navigation.navigate('ViewMedicalHistory', {"patientID": item.patientID}) }}>
                     <Text style={styles.viewProfileBtn}>
                         {item.patientID}
                     </Text>
@@ -79,7 +53,7 @@ const DoctorAllAppointmentScreen = () => {
                 <Text style={styles.itemText}>Ngày: {item.date}</Text>
                 <Text style={styles.itemText}> - Giờ: {item.time}</Text>
             </View>
-            <CustomButton title="Ra toa" onPress={() => prescribing(item.id)} />
+            <CustomButton title="Ra toa" onPress={() => navigation.navigate('Prescription', {"patientID": item.patientID})} />
         </View>
     );
 

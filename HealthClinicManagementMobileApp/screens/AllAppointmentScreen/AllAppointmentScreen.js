@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import CustomButton from '../../components/CustomButton/CustomButton';
+import { COLORS } from '../../configs/configs';
 
 const AllAppointmentScreen = () => {
     const [appointments, setAppointments] = useState([
@@ -35,9 +37,7 @@ const AllAppointmentScreen = () => {
             <Text style={[styles.itemText, { color: item.confirmed ? 'green' : 'red' }]}>
                 {item.confirmed ? 'Đã xác nhận' : 'Chưa xác nhận'}
             </Text>
-            <TouchableOpacity onPress={() => handleCancelAppointment(item.id)}>
-                <Text style={styles.cancelButton}>Hủy lịch hẹn</Text>
-            </TouchableOpacity>
+            <CustomButton title={"Hủy lịch hẹn"} color={"#ff4d4d"} onPress={() => handleCancelAppointment(item.id)} />
         </View>
     );
 

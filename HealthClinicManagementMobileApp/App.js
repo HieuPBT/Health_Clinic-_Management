@@ -6,13 +6,13 @@ import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
 
 import isAuthenticated from './utils/AuthUtils';
-
-import LoginScreen from './screens/LoginScreen';
-import AvatarPicker from './components/AvatarPicker/AvatarPicker';
-import RegisterScreen from './screens/RegisterScreen/RegisterScreen';
 import Context from './Context';
 import NurseAppNavigator from './navigation/NurseAppNavigator';
 import DoctorAppNavigator from './navigation/DoctorAppNavigator';
+import API, { endpoints } from './configs/API';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from './configs/configs';
+
 
 export default function App() {
   useEffect(() => {
@@ -22,11 +22,14 @@ export default function App() {
     checkingAuth();
   }, []);
   const [authenticated, setAuthenticated] = useState(false);
-  const [role, setRole] = useState(1); //1: bệnh nhân, 2: y tá, 3: bác sỹ
+  const [role, setRole] = useState(3); //1: bệnh nhân, 2: y tá, 3: bác sỹ
+  const [accessToken, setAccesstoken] = useState();
+  const [userData, setUserData] = useState({});
   return (
     <NavigationContainer>
-      <Context.Provider value={{ authenticated, setAuthenticated, setRole }}>
+      <Context.Provider value={{ authenticated, setAuthenticated, setRole, setAccesstoken, userData, setUserData, accessToken }}>
         {role == 1 && authenticated ? <AppNavigator /> : authenticated && role == 2 ? <NurseAppNavigator /> : authenticated && role == 3 ? <DoctorAppNavigator /> : <AuthNavigator />}
+        <Toast />
       </Context.Provider>
     </NavigationContainer>
   );

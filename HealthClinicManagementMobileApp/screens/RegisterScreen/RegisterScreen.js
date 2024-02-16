@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Button } from 'react-native-elements';
 import Step1 from './Steps/Step1';
 import Step2 from './Steps/Step2';
@@ -10,10 +10,13 @@ import { Image, View } from 'react-native';
 import Styles1 from './Styles';
 import Styles from '../../styles/Styles';
 import UserProfileScreen from '../UserProfileScreen';
-import axios from 'axios';
+import API, { endpoints } from '../../configs/API';
+import Context from '../../Context';
+import showSuccessToast from '../../utils/ShowSuccessToast';
+import showFailedToast from '../../utils/ShowFailedToast';
 
 
-const RegisterScreen = () => {
+const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password_retype, setPassword_retype] = useState('');
@@ -24,6 +27,8 @@ const RegisterScreen = () => {
   const [avatarSource, setAvatarSource] = useState(null);
   const [healthInsurance, setHealthInsurance] = useState('');
   const [address, setAddress] = useState('');
+
+  const { setIsAuthenticated, setRole } = useContext(Context);
 
   const logInformation = () => {
     console.log("Email:", email);
@@ -38,7 +43,7 @@ const RegisterScreen = () => {
     console.log("Address:", address);
   };
 
-  const createAccount = async (userData) => {
+  const createAccount = async () => {
     const formData = new FormData();
     formData.append('email', email);
     formData.append('password', password);
@@ -55,14 +60,25 @@ const RegisterScreen = () => {
     formData.append('address', address);
 
     // Gửi dữ liệu lên server
-    const res = await axios.post('https://hieupbt.pythonanywhere.com/api/user/',
-    formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    try {
+      const res = await API.post(endpoints['user'],
+        formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      if (res.status == 201) {
+        showSuccessToast('Tạo tài khoản thành công!');
+        navigation.navigate('Đăng nhập');
+      } else if (res.status == 400) {
+        showFailedToast('Email này đã được đăng ký');
+      } else if (res.status == 500) {
+        showFailedToast('Server đang bị lỗi, vui lòng thử lại sau');
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
 
-    console.log(res.data);
   }
 
 
@@ -90,20 +106,22 @@ const RegisterScreen = () => {
       case 4:
         return (
           <>
-            <UserProfileScreen name={name} phoneNumber={phoneNumber} dateOfBirth={dateOfBirth} gender={gender} avatarSource={avatarSource} healthInsurance={healthInsurance} address={address} email={email} preview={true} />
+            <UserProfileScreen userData={{
+              email: email,
+              password: password,
+              avatar: avatarSource,
+              full_name: name,
+              gender: gender,
+              phone_number: phoneNumber,
+              date_of_birth: dateOfBirth,
+              address: address,
+              patient: {
+                health_insurance: healthInsurance
+              },
+            }} preview={true} />
             <View style={Styles1.buttonContainer}>
               <CustomButton title="Tạo tài khoản" onPress={() => {
-                createAccount({
-                  email: email,
-                  password: password,
-                  full_name: name,
-                  phoneNumber: phoneNumber,
-                  date_of_birth: dateOfBirth,
-                  gender: gender,
-                  avatarSource: avatarSource,
-                  health_insurance: healthInsurance,
-                  address: address
-                });
+                createAccount();
               }} />
               <CustomButton title="Sửa thông tin" color={COLORS.dark_green} style={Styles1.navBtn} onPress={() => setStep(1)} />
             </View>
