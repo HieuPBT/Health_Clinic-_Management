@@ -35,6 +35,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
+CLOUDINARY_BASE_URL = ''
 
 cloudinary.config(
   cloud_name = "dp3f0rnqh",
@@ -96,7 +97,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'healthclinicdb',
         'USER': 'root',
-        'PASSWORD': 'admin@123',
+        'PASSWORD': 'Admin123@',
         'HOST': '' #mặc định local host
     }
 }

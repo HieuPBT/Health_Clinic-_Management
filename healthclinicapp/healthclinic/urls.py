@@ -1,5 +1,5 @@
 from django.urls import path, include, re_path
-from healthclinic.views import AppointmentConfirm, AppointmentListCreate, UserViewSet, PatientViewSet, CurrentUserViewSet, MedicineListViewSet
+from healthclinic.views import AppointmentViewSet, UserViewSet, MedicineListViewSet
 from rest_framework import routers
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -7,8 +7,7 @@ from drf_yasg import openapi
 
 router = routers.DefaultRouter()
 router.register('user', UserViewSet)
-router.register('appointment', AppointmentListCreate, basename='appointment')
-#router.register('current_user', CurrentUserViewSet, basename='current_user')
+router.register('appointment', AppointmentViewSet, basename='appointment')
 router.register('medicine', MedicineListViewSet, basename='medicine')
 
 
@@ -25,10 +24,6 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('current_user/', CurrentUserViewSet.as_view()),
-    #path('appointment/', AppointmentListCreate.as_view()),
-    path('appointment/<int:pk>/', AppointmentConfirm.as_view()),
-
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
             schema_view.without_ui(cache_timeout=0),
             name='schema-json'),

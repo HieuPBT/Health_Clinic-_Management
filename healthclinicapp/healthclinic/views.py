@@ -1,50 +1,40 @@
 from django.http import Http404
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status, views, parsers, permissions
+from rest_framework.decorators import action
 from healthclinic import perms
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import django_filters
 from rest_framework import filters
-
 from healthclinic import serializers, paginators, models
 # Create your views here.
 
 
-class CurrentUserViewSet(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get (self, request):
-        user_serializer = serializers.UserSerializer(request.user)
-        return Response(user_serializer.data)
-
-
-class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.RetrieveAPIView):
+class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = models.CustomUser.objects.all()
-    #permission_classes = [permissions.IsAuthenticated]
     serializer_class = serializers.UserSerializer
     pagination_class = paginators.UserPagination
+    #permission_classes = [permissions.IsAuthenticated]
     #parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
         # only allow any when create new user
         if self.action == 'create':
             return [permissions.AllowAny()]
+        if self.action == 'get_current_user':
+            return [perms.IsPatient()]
 
         return [permissions.IsAuthenticated()]
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+    # decorator
+    # return current user data
+    @action(detail=False, methods=['get'], url_path='current_user', url_name='current_user')
+    def get_current_user(self, request):
+        return Response(serializers.UserSerializer(request.user).data)
 
 
-class PatientViewSet(viewsets.ModelViewSet):
-    queryset = models.CustomUser.objects.all()
-    serializer_class = serializers.PatientSerializer
-
-
-class AppointmentListCreate(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView):
+class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView ):
     queryset = models.Appointment.objects.filter(is_confirm=False)
     serializer_class = serializers.AppointmentSerializer
 
@@ -62,13 +52,38 @@ class AppointmentListCreate(viewsets.ViewSet, generics.CreateAPIView, generics.L
     #         return [perms.IsPatient]
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action in ['list', 'create', 'get_current_user_appointment']:
             return [perms.IsPatient()]
+        # if self.action == 'get_current_user_appointment':
+        #     return [perms.IsPatient()]
         return [perms.IsNurse()]
 
     def perform_create(self, serializer):
         # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
         serializer.save(patient=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return serializers.AppointmentConfirmSerializer
+        return serializers.AppointmentSerializer
+
+    def perform_update(self, serializer):
+        if self.request.method == 'PATCH' and 'confirmed_by' not in serializer.validated_data:
+            # Gán ID của Nurse vào trường confirmed_by
+            serializer.validated_data['confirmed_by'] = self.request.user
+        serializer.save()
+
+    def get_queryset(self):
+        queries = self.queryset
+        q = self.request.query_params.get("q")
+        if q:
+            queries = queries.filter(booking_date=q)
+        return queries
+
+    @action(detail=False, methods=['get'], url_path='current_user_appointment', url_name='current_user_appointment')
+    def get_current_user_appointment(self, request):
+        a = models.Appointment.objects.filter(patient=request.user).all()
+        return Response(serializers.AppointmentSerializer(a, many=True, context={'request': request}).data)
 
     # def perform_create(self, serializer):
     #     if 'patient' not in serializer.validated_data:
@@ -83,23 +98,20 @@ class AppointmentListCreate(viewsets.ViewSet, generics.CreateAPIView, generics.L
     #     serializer.save()
 
 
-class AppointmentConfirm(generics.RetrieveUpdateDestroyAPIView):
-    queryset = models.Appointment.objects.all()
-    permission_classes = [perms.IsNurse]
-
-    def get_serializer_class(self):
-        if self.request.method == 'PATCH':
-            return serializers.AppointmentConfirmSerializer
-        return serializers.AppointmentSerializer
-
-    def perform_update(self, serializer):
-        if self.request.method == 'PATCH' and 'confirmed_by' not in serializer.validated_data:
-            # Gán ID của Nurse vào trường confirmed_by
-            serializer.validated_data['confirmed_by'] = self.request.user
-        serializer.save()
-
-    # def confirm(self, serializer):
-    #     serializer.save(confirmed_by=self.request.user)
+# class AppointmentConfirm(generics.RetrieveUpdateAPIView):
+#     queryset = models.Appointment.objects.all()
+#     permission_classes = [perms.IsNurse]
+#
+#     def get_serializer_class(self):
+#         if self.request.method == 'PATCH':
+#             return serializers.AppointmentConfirmSerializer
+#         return serializers.AppointmentSerializer
+#
+#     def perform_update(self, serializer):
+#         if self.request.method == 'PATCH' and 'confirmed_by' not in serializer.validated_data:
+#             # Gán ID của Nurse vào trường confirmed_by
+#             serializer.validated_data['confirmed_by'] = self.request.user
+#         serializer.save()
 
 
 class MedicineFilter(django_filters.FilterSet):

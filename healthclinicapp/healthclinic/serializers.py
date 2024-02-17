@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser, Patient, Appointment, Medicine, MedicineCategory
+from healthclinicapp import settings
 
 
 # class UserSerializer(serializers.ModelSerializer):
@@ -38,8 +39,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'password', 'avatar', 'date_of_birth', 'patient']
-        #extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
+        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient']
+        extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     def create(self, validated_data):
         patient_data = validated_data.pop('patient', None) # Extract patient data if exists
@@ -82,7 +83,6 @@ class AppointmentConfirmSerializer(serializers.ModelSerializer):
 
 
 class MedicineSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Medicine
         fields = ['id', 'name', 'unit']
