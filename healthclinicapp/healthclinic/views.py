@@ -31,12 +31,13 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     # return current user data
     @action(detail=False, methods=['get'], url_path='current_user', url_name='current_user')
     def get_current_user(self, request):
-        return Response(serializers.UserSerializer(request.user).data)
+        return Response(serializers.UserListSerializer(request.user).data)
 
 
 class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView ):
-    queryset = models.Appointment.objects.filter(is_confirm=False)
+    #queryset = models.Appointment.objects.filter(is_confirm=False).all()
     serializer_class = serializers.AppointmentSerializer
+    pagination_class = paginators.AppointmentPagination
 
     # def get_queryset(self):
     #     # Lọc các cuộc hẹn dựa trên người dùng đã xác thực là bệnh nhân
@@ -52,11 +53,11 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
     #         return [perms.IsPatient]
 
     def get_permissions(self):
-        if self.action in ['list', 'create', 'get_current_user_appointment']:
+        if self.action in ['create', 'get_current_user_appointment']:
             return [perms.IsPatient()]
         # if self.action == 'get_current_user_appointment':
         #     return [perms.IsPatient()]
-        return [perms.IsNurse()]
+        return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
         # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
@@ -74,16 +75,19 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         serializer.save()
 
     def get_queryset(self):
-        queries = self.queryset
+        queries = models.Appointment.objects.all()
         q = self.request.query_params.get("q")
         if q:
             queries = queries.filter(booking_date=q)
-        return queries
+            return queries
+        return models.Appointment.objects.filter(is_confirm=False)
 
     @action(detail=False, methods=['get'], url_path='current_user_appointment', url_name='current_user_appointment')
     def get_current_user_appointment(self, request):
         a = models.Appointment.objects.filter(patient=request.user).all()
-        return Response(serializers.AppointmentSerializer(a, many=True, context={'request': request}).data)
+        paginator = paginators.AppointmentPagination()
+        result_page = paginator.paginate_queryset(a, request)
+        return paginator.get_paginated_response(serializers.AppointmentSerializer(result_page, many=True, context={'request': request}).data)
 
     # def perform_create(self, serializer):
     #     if 'patient' not in serializer.validated_data:
@@ -130,3 +134,28 @@ class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
     permission_classes = [perms.IsDoctor]
     filter_backends = [filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = MedicineFilter
+
+
+class PrescriptionViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+    queryset = models.Prescription.objects.all()
+    serializer_class = serializers.PrescriptionSerializer
+    permission_classes = [perms.IsDoctor]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return serializers.PrescriptionCreateSerializer
+        return serializers.PrescriptionSerializer
+
+    def perform_create(self, serializer):
+        # Tự động gán bac si hiện tại vào toa thuoc mới
+        serializer.save(doctor=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='patient_prescription', url_name='patient_prescription')
+    def get_patient_prescription(self, request):
+        p = models.Prescription.objects.all()
+        q = self.request.query_params.get("q")
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get("end_date")
+        if q and start_date and end_date:
+            p = p.filter(appointment__patient=q).filter(created_date__gte=start_date).filter(created_date__lte=end_date)
+        return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)

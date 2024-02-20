@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Patient, Appointment, Medicine, MedicineCategory
+from healthclinic import models
 from healthclinicapp import settings
 
 
@@ -30,7 +30,7 @@ from healthclinicapp import settings
 
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Patient
+        model = models.Patient
         fields = ['health_insurance',]
 
 
@@ -38,15 +38,15 @@ class UserSerializer(serializers.ModelSerializer):
     patient = PatientSerializer(required=False)
 
     class Meta:
-        model = CustomUser
+        model = models.CustomUser
         fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient']
         extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     def create(self, validated_data):
         patient_data = validated_data.pop('patient', None) # Extract patient data if exists
-        user = CustomUser.objects.create_user(**validated_data) # Create the user
+        user = models.CustomUser.objects.create_user(**validated_data) # Create the user
         if patient_data:
-            Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
+            models.Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
         return user
 
     def update(self, instance, validated_data):
@@ -59,15 +59,33 @@ class UserSerializer(serializers.ModelSerializer):
                     setattr(patient, attr, value)
                 patient.save()
             else:
-                Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
+                models.Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
         return user
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField(source='avatar')
+    patient = PatientSerializer(required=False)
+
+    class Meta:
+        model = models.CustomUser
+        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient']
+        extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
+
+    # return avatar absolute url
+    def get_avatar(self, customuser):
+        if customuser.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_url(settings.CLOUDINARY_BASE_URL % customuser.avatar)
+            return settings.CLOUDINARY_BASE_URL % customuser.avatar
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
     # create appointment
     class Meta:
-        model = Appointment
-        exclude = ['patient', 'is_confirm', 'confirmed_by']  # Loại bỏ trường 'patient' từ trường fields
+        model = models.Appointment
+        exclude = ['patient']  # Loại bỏ trường 'patient' từ trường fields
 
     # def create(self, validated_data):
     #      # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
@@ -78,12 +96,61 @@ class AppointmentSerializer(serializers.ModelSerializer):
 class AppointmentConfirmSerializer(serializers.ModelSerializer):
     # nurse confirm appointment
     class Meta:
-        model = Appointment
+        model = models.Appointment
         fields = ['is_confirm', 'confirmed_by']
 
 
 class MedicineSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Medicine
+        model = models.Medicine
         fields = ['id', 'name', 'unit']
+
+
+class PrescriptionMedicineSerializer(serializers.ModelSerializer):
+    medicine = MedicineSerializer()
+    quantity = serializers.IntegerField(min_value=1)
+
+    class Meta:
+        model = models.PrescriptionMedicine
+        fields = ['medicine', 'quantity']
+
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    medicine_list = PrescriptionMedicineSerializer(many=True, source='prescriptionmedicine_set')
+
+    class Meta:
+        model = models.Prescription
+        fields = ['id', 'doctor', 'appointment', 'description', 'conclusion', 'created_date', 'medicine_list']
+
+
+class PrescriptionMedicineCreateSerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(min_value=1)
+
+    class Meta:
+        model = models.PrescriptionMedicine
+        fields = ['medicine', 'quantity']
+
+
+class PrescriptionCreateSerializer(serializers.ModelSerializer):
+    medicine_list = PrescriptionMedicineCreateSerializer(many=True, source='prescriptionmedicine_set')
+
+    class Meta:
+        model = models.Prescription
+        fields = ['id', 'appointment', 'description', 'conclusion', 'medicine_list']
+
+    def validate_medicine_list(self, value):
+        medicine_ids = [item['medicine'].id for item in value]
+        medicines_exist = models.Medicine.objects.filter(id__in=medicine_ids).count() == len(medicine_ids)
+
+        if not medicines_exist:
+            raise serializers.ValidationError("One or more medicines do not exist in the database.")
+
+        return value
+
+    def create(self, validated_data):
+        medicine_list_data = validated_data.pop('prescriptionmedicine_set')
+        prescription = models.Prescription.objects.create(**validated_data)
+        for medicine_data in medicine_list_data:
+            models.PrescriptionMedicine.objects.create(prescription=prescription, **medicine_data)
+        return prescription
 

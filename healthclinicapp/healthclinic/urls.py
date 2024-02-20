@@ -1,15 +1,16 @@
 from django.urls import path, include, re_path
-from healthclinic.views import AppointmentViewSet, UserViewSet, MedicineListViewSet
+from healthclinic import views
 from rest_framework import routers
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 router = routers.DefaultRouter()
-router.register('user', UserViewSet)
-router.register('appointment', AppointmentViewSet, basename='appointment')
-router.register('medicine', MedicineListViewSet, basename='medicine')
-
+router.register('user', views.UserViewSet)
+router.register('appointment', views.AppointmentViewSet, basename='appointment')
+router.register('medicine', views.MedicineListViewSet, basename='medicine')
+router.register('prescription', views.PrescriptionViewSet)
+#router.register('prescriptionmedicine', views.PrescriptionMedicineViewSet)
 
 schema_view = get_schema_view(
     openapi.Info(

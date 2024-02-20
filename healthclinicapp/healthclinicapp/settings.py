@@ -35,7 +35,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-CLOUDINARY_BASE_URL = ''
+CLOUDINARY_BASE_URL = 'https://res.cloudinary.com/dp3f0rnqh/%s'
 
 cloudinary.config(
   cloud_name = "dp3f0rnqh",

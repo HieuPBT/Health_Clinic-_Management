@@ -7,3 +7,11 @@ set number of results per page
 
 class UserPagination(PageNumberPagination):
     page_size = 3
+
+
+class AppointmentPagination(PageNumberPagination):
+    page_size = 5
+
+
+class PrescriptionPagination(PageNumberPagination):
+    page_size = 10

@@ -88,7 +88,7 @@ class Appointment(BaseModel):
         unique_together = ['patient', 'booking_date', 'booking_time']
 
     def __str__(self):
-        return self.department
+        return "{}_{}".format(self.patient.full_name.__str__(), self.patient.phone_number.__str__())
 
 
 class MedicineCategory(BaseModel):
@@ -109,3 +109,22 @@ class Medicine(BaseModel):
     def __str__(self):
         return self.name
 
+
+class Prescription(BaseModel):
+    doctor = models.ForeignKey(CustomUser, on_delete=models.RESTRICT)
+    appointment = models.ForeignKey(Appointment, on_delete=models.RESTRICT, unique=True)
+    medicine_list = models.ManyToManyField(Medicine, through='PrescriptionMedicine')
+    description = models.CharField(max_length=255, null=False, blank=True)
+    conclusion = models.CharField(max_length=255, null=False, blank=True)
+
+    def __str__(self):
+        return "{}_{}_{}".format(self.appointment.patient.full_name.__str__(), self.appointment.booking_date.__str__(), self.appointment.booking_time.__str__())
+
+
+class PrescriptionMedicine(models.Model):
+    prescription = models.ForeignKey(Prescription, on_delete=models.CASCADE)
+    medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return "{}_{}".format(self.prescription.__str__(), self.medicine.__str__())

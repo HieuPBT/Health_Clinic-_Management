@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.safestring import mark_safe
 from .forms import CustomUserChangeForm, CustomUserCreationForm, AppointmentForm
-from .models import CustomUser, Patient, Employee, Appointment, MedicineCategory, Medicine
+from .models import CustomUser, Patient, Employee, Appointment, MedicineCategory, Medicine, Prescription, PrescriptionMedicine
 # Register your models here.
 
 
@@ -47,13 +47,9 @@ class PatientAdmin(admin.ModelAdmin):
 
 
 class AppointmentAdmin(admin.ModelAdmin):
-    add_form = AppointmentForm
-    fieldsets = (
-        (None, {'fields': ('patient', 'department', 'booking_date', 'booking_time', 'is_confirm', 'confirmed_by')}),
-    )
-    add_fieldsets = (
-        (None, {'fields': ('patient', 'department', 'booking_date', 'booking_time', 'is_confirm', 'confirmed_by')}),
-    )
+    list_display = ['id', 'patient', 'department', 'booking_date', 'booking_time',  'is_confirm', 'confirmed_by']
+    search_fields = ['patient']
+    ordering = ['id']
 
 
 class MedicineCategoryAdmin(admin.ModelAdmin):
@@ -70,9 +66,17 @@ class MedicineAdmin(admin.ModelAdmin):
     ordering = ['id']
 
 
+class PrescriptionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'appointment', 'doctor']
+    search_fields = ['id']
+    ordering = ['id']
+
+
 admin.site.register(CustomUser, UserAdmin)
 admin.site.register(Patient)
 admin.site.register(Employee)
 admin.site.register(Appointment, AppointmentAdmin)
 admin.site.register(Medicine, MedicineAdmin)
 admin.site.register(MedicineCategory, MedicineCategoryAdmin)
+admin.site.register(Prescription, PrescriptionAdmin)
+admin.site.register(PrescriptionMedicine)
