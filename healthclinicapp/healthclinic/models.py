@@ -83,6 +83,8 @@ class Appointment(BaseModel):
     booking_time = models.IntegerField(choices=TIMESLOT_LIST)
     is_confirm = models.BooleanField(default=False)
     confirmed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='nurse_confirm')
+    is_cancel = models.BooleanField(default=False)
+    is_pay = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ['patient', 'booking_date', 'booking_time']
@@ -124,6 +126,7 @@ class Prescription(BaseModel):
 class PrescriptionMedicine(models.Model):
     prescription = models.ForeignKey(Prescription, on_delete=models.CASCADE)
     medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE)
+    note = models.CharField(max_length=100, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):

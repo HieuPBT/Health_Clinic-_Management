@@ -10,6 +10,11 @@ class IsPatient(BasePermission):
         return False
 
 
+class PatientOwner(IsPatient):
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view) and request.user == obj.patient
+
+
 class IsNurse(BasePermission):
     def has_permission(self, request, view):
         # Kiểm tra xem người dùng đã xác thực chưa

@@ -10,7 +10,7 @@ class UserPagination(PageNumberPagination):
 
 
 class AppointmentPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 10
 
 
 class PrescriptionPagination(PageNumberPagination):

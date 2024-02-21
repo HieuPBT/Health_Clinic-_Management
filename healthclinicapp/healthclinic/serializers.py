@@ -69,15 +69,15 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.CustomUser
-        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient']
+        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient', 'role']
         extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     # return avatar absolute url
     def get_avatar(self, customuser):
         if customuser.avatar:
             request = self.context.get('request')
-            if request:
-                return request.build_absolute_url(settings.CLOUDINARY_BASE_URL % customuser.avatar)
+            if request: # url -> uri
+                return request.build_absolute_uri(settings.CLOUDINARY_BASE_URL % customuser.avatar)
             return settings.CLOUDINARY_BASE_URL % customuser.avatar
 
 
@@ -85,12 +85,29 @@ class AppointmentSerializer(serializers.ModelSerializer):
     # create appointment
     class Meta:
         model = models.Appointment
-        exclude = ['patient']  # Loại bỏ trường 'patient' từ trường fields
+        exclude = ['patient', 'confirmed_by', 'updated_date']
 
-    # def create(self, validated_data):
-    #      # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
-    #     validated_data['patient'] = self.context['request'].user
-    #     return super(by.create(validated_data)
+
+class AppointmentCreateSerializer(serializers.ModelSerializer):
+    # create appointment
+
+    class Meta:
+        model = models.Appointment
+        fields =['department', 'booking_date', 'booking_time']
+
+
+class AppointmentListSerializer(serializers.ModelSerializer):
+    # list appointment
+    patient = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Appointment
+        fields = '__all__'  # Loại bỏ trường 'patient' từ trường fields
+
+    def get_patient(self, appointment):
+        patient_data = UserListSerializer(appointment.patient, context=self.context).data
+        patient_data.pop('role', None)  # Loại bỏ trường role nếu tồn tại
+        return patient_data
 
 
 class AppointmentConfirmSerializer(serializers.ModelSerializer):
@@ -98,6 +115,13 @@ class AppointmentConfirmSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Appointment
         fields = ['is_confirm', 'confirmed_by']
+
+
+class AppointmentDeleteSerializer(serializers.ModelSerializer):
+    # nurse confirm appointment
+    class Meta:
+        model = models.Appointment
+        fields = ['is_cancel']
 
 
 class MedicineSerializer(serializers.ModelSerializer):
@@ -112,7 +136,7 @@ class PrescriptionMedicineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.PrescriptionMedicine
-        fields = ['medicine', 'quantity']
+        fields = ['medicine', 'quantity', 'note']
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):
@@ -128,7 +152,7 @@ class PrescriptionMedicineCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.PrescriptionMedicine
-        fields = ['medicine', 'quantity']
+        fields = ['medicine', 'quantity', 'note']
 
 
 class PrescriptionCreateSerializer(serializers.ModelSerializer):
