@@ -6,7 +6,7 @@ from cloudinary.models import CloudinaryField
 from rest_framework.exceptions import ValidationError
 
 from .managers import CustomUserManager
-from .choices import Role, Gender, Department
+from .choices import Role, Gender, Department, Status, Payment
 
 from healthclinicapp import settings
 
@@ -20,7 +20,7 @@ Using email as username to login
 """
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_('email'), max_length=100, unique=True) # using email instead of username
     full_name = models.CharField(_('full name'), max_length=100, blank=True, null=True)
     role = models.CharField(_('role'), max_length=50, choices=Role.choices, default=Role.PATIENT) # default role=Patient
@@ -30,10 +30,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=11, blank=True, null=True)
     address = models.CharField(max_length=255, null=True, blank=True)
 
-    is_active = models.BooleanField(default=True, help_text=_("Designates whether the user can log into this admin site."),)
+    is_active = models.BooleanField(default=True, help_text=_(
+        "Designates whether this user should be treated as active. "
+        "Unselect this instead of deleting accounts."
+        ),)
     is_staff = models.BooleanField(default=False, help_text=_(
-            "Designates whether this user should be treated as active. "
-            "Unselect this instead of deleting accounts."
+            "Designates whether the user can log into this admin site."
         ),) # indicate whether user can log in admin site
     date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
 
@@ -47,16 +49,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 class Patient(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     health_insurance = models.CharField(max_length=50, blank=True, null=True)
-
-    def __str__(self):
-        return self.user.email
-
-
-class Employee(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
-    Department = models.CharField(max_length=100, choices=Department.choices, default=Department.COSMETIC)
 
     def __str__(self):
         return self.user.email
@@ -71,20 +65,34 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class Shift(BaseModel):
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+
+class Employee(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    Department = models.CharField(max_length=100, choices=Department.choices)
+    shift = models.ManyToManyField(Shift)
+
+    def __str__(self):
+        return self.user.email
+
+
+class Schedule(BaseModel):
+    doctor = models.ForeignKey(User, on_delete=models.RESTRICT)
+    shift = models.ForeignKey(Shift, on_delete=models.RESTRICT)
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+
 class Appointment(BaseModel):
-    TIMESLOT_LIST = (
-        (0, '07:30 – 10:30'),
-        (1, '13:00 – 16:30'),
-        (3, '18:30 – 09:30'),
-    )
-    patient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='patient_appointment')
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='patient_appointment')
     department = models.CharField(max_length=100, choices=Department.choices)
     booking_date = models.DateField(help_text="YY-MM-DD")
-    booking_time = models.IntegerField(choices=TIMESLOT_LIST)
-    is_confirm = models.BooleanField(default=False)
-    confirmed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='nurse_confirm')
-    is_cancel = models.BooleanField(default=False)
-    is_pay = models.BooleanField(default=False)
+    booking_time = models.TimeField()
+    status = models.CharField(max_length=100, choices=Status.choices, default=Status.UNCONFIRMED)
+    confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='nurse_confirm')
 
     class Meta:
         unique_together = ['patient', 'booking_date', 'booking_time']
@@ -113,7 +121,7 @@ class Medicine(BaseModel):
 
 
 class Prescription(BaseModel):
-    doctor = models.ForeignKey(CustomUser, on_delete=models.RESTRICT)
+    doctor = models.ForeignKey(User, on_delete=models.RESTRICT)
     appointment = models.ForeignKey(Appointment, on_delete=models.RESTRICT, unique=True)
     medicine_list = models.ManyToManyField(Medicine, through='PrescriptionMedicine')
     description = models.CharField(max_length=255, null=False, blank=True)
@@ -131,3 +139,17 @@ class PrescriptionMedicine(models.Model):
 
     def __str__(self):
         return "{}_{}".format(self.prescription.__str__(), self.medicine.__str__())
+
+
+class Invoice(BaseModel):
+    prescription = models.ForeignKey(Prescription, on_delete=models.RESTRICT, unique=True)
+    nurse = models.ForeignKey(User, on_delete=models.RESTRICT)
+    appointment_fee = models.PositiveIntegerField(null=False)
+    prescription_fee = models.PositiveIntegerField(null=True, blank=True)
+    payment_method = models.CharField(max_length=100, choices=Payment.choices)
+
+    def get_total(self):
+        total = self.appointment_fee
+        if self.prescription_fee is not None:
+            total += self.prescription_fee
+        return total

@@ -1,7 +1,7 @@
-from rest_framework.permissions import BasePermission
+from rest_framework import permissions
 
 
-class IsPatient(BasePermission):
+class IsPatient(permissions.BasePermission):
     def has_permission(self, request, view):
         # Kiểm tra xem người dùng đã xác thực chưa
         if request.user.is_authenticated:
@@ -10,12 +10,17 @@ class IsPatient(BasePermission):
         return False
 
 
-class PatientOwner(IsPatient):
+class PatientOwner(permissions.IsAuthenticated):
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view) and request.user == obj.patient
 
 
-class IsNurse(BasePermission):
+class OwnerAuthenticated(permissions.IsAuthenticated):
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view) and request.user == obj.user
+
+
+class IsNurse(permissions.BasePermission):
     def has_permission(self, request, view):
         # Kiểm tra xem người dùng đã xác thực chưa
         if request.user.is_authenticated:
@@ -24,7 +29,7 @@ class IsNurse(BasePermission):
         return False
 
 
-class IsDoctor(BasePermission):
+class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
         # Kiểm tra xem người dùng đã xác thực chưa
         if request.user.is_authenticated:

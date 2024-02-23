@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from healthclinic.views import activate
+
 urlpatterns = [
     # api
     path('api/', include('healthclinic.urls')),
@@ -24,4 +26,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # oauth2
     path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    path('activate/<str:uidb64>/<str:token>/', activate, name='activate'),
 ]

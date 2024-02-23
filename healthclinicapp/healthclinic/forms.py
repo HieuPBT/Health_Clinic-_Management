@@ -1,18 +1,19 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField, UserCreationForm, UserChangeForm
-from healthclinic.models import CustomUser, Appointment
+from healthclinic.models import User, Appointment
 
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
-        model = CustomUser
+        model = User
         fields = ('email',)
 
 
 class CustomUserChangeForm(UserChangeForm):
+
     class Meta:
-        model = CustomUser
-        fields = ('email',)
+        model = User
+        fields = ('email', 'password',)
 
 
 class AppointmentForm(UserCreationForm):

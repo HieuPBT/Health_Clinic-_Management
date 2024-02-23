@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.safestring import mark_safe
 from .forms import CustomUserChangeForm, CustomUserCreationForm, AppointmentForm
-from .models import CustomUser, Patient, Employee, Appointment, MedicineCategory, Medicine, Prescription, PrescriptionMedicine
+from .models import *
 # Register your models here.
 
 
@@ -14,8 +14,8 @@ class UserAdmin(BaseUserAdmin):
     # The fields to be used in displaying the User model.
     # These override the definitions on the base UserAdmin
     # that reference specific fields on auth.User.
-    list_display = ('id', 'email', 'role', 'last_login', 'date_joined')
-    list_filter = ('id', 'email', 'role')
+    list_display = ('id', 'email', 'role', 'is_active', 'is_staff', 'is_superuser', 'last_login', 'date_joined')
+    list_filter = ('role',)
     fieldsets = (
         (None, {'fields': ('email', 'password', 'role')}),
         ('Permission', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
@@ -30,12 +30,12 @@ class UserAdmin(BaseUserAdmin):
         ('Personal info', {'fields': ('full_name', 'gender', 'date_of_birth', 'phone_number', 'address', 'avatar')}),
     )
     search_fields = ('email',)
-    ordering = ('email',)
+    ordering = ('id',)
     filter_horizontal = ()
 
 
 class PatientAdmin(admin.ModelAdmin):
-    list_display = []
+    list_display = ['id', 'patient__full_name']
     readonly_fields = ['avatar']
 
     def avatar(self, obj):
@@ -47,7 +47,7 @@ class PatientAdmin(admin.ModelAdmin):
 
 
 class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'patient', 'department', 'booking_date', 'booking_time',  'is_confirm', 'confirmed_by']
+    list_display = ['id', 'patient', 'department', 'booking_date', 'booking_time',  'status', 'confirmed_by']
     search_fields = ['patient']
     ordering = ['id']
 
@@ -72,9 +72,11 @@ class PrescriptionAdmin(admin.ModelAdmin):
     ordering = ['id']
 
 
-admin.site.register(CustomUser, UserAdmin)
+admin.site.register(User, UserAdmin)
 admin.site.register(Patient)
 admin.site.register(Employee)
+admin.site.register(Shift)
+admin.site.register(Schedule)
 admin.site.register(Appointment, AppointmentAdmin)
 admin.site.register(Medicine, MedicineAdmin)
 admin.site.register(MedicineCategory, MedicineCategoryAdmin)

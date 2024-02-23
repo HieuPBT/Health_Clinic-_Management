@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from rest_framework import serializers
 from healthclinic import models
 from healthclinicapp import settings
@@ -38,15 +39,18 @@ class UserSerializer(serializers.ModelSerializer):
     patient = PatientSerializer(required=False)
 
     class Meta:
-        model = models.CustomUser
-        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient']
+        model = models.User
+        fields = ['email', 'password', 'full_name', 'role', 'avatar', 'gender', 'date_of_birth', 'phone_number', 'address', 'patient']
         extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     def create(self, validated_data):
         patient_data = validated_data.pop('patient', None) # Extract patient data if exists
-        user = models.CustomUser.objects.create_user(**validated_data) # Create the user
+        user = models.User.objects.create_user(**validated_data) # Create the user
+        user.is_active = False # require account verification to login
         if patient_data:
             models.Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
+
+        user.groups.add(Group.objects.get(name='PATIENT'))
         return user
 
     def update(self, instance, validated_data):
@@ -68,8 +72,8 @@ class UserListSerializer(serializers.ModelSerializer):
     patient = PatientSerializer(required=False)
 
     class Meta:
-        model = models.CustomUser
-        fields = ['id', 'email', 'password', 'avatar', 'date_of_birth', 'patient', 'role']
+        model = models.User
+        fields = ['id','email', 'password', 'full_name', 'role', 'avatar', 'gender', 'date_of_birth', 'phone_number', 'address', 'patient']
         extra_kwargs = {'password': {'write_only': True}} # Ensure password is write-only
 
     # return avatar absolute url

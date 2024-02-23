@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-AUTH_USER_MODEL = 'healthclinic.CustomUser'
+AUTH_USER_MODEL = 'healthclinic.User'
 
 #cloudinary
 
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'healthclinic.apps.HealthclinicConfig',
     'rest_framework',
     'cloudinary',
@@ -157,7 +158,19 @@ REST_FRAMEWORK = {
     )
 }
 
-CLIENT_ID = 'QYZ6faId73t2AW23sV1sSrG7kGcG4zd2GEYqvJQF'
+CLIENT_ID = 'EyvfIPMhP7STvn3jBTnSs5czafW7wGPJPj4txSIk'
 
-CLIENT_SECRET = 'NReTEdzNK111E0NoDOqB8prruv3hqvbWmP7HNvnmMTPZfgEuHg25q6APBZ10aDJT9PrZE8Fuq5H6xgubMzAJbC4gzO5Pbd6cNQHPL0Lx41LVqPFnbZKDhje7mqy3P7kD'
+CLIENT_SECRET = 'adD4IboxqcsSWgoiADIerWpU62WQsLCzkhNBz4YQYqksPbFsrJr4gWI3jI7Zp2sn8BWMFTRrqfHgIVwG3SAyvy5TdMcult4iJ2sCLy81kcQn2o0w4NaQ6PQoxvcuP269'
 
+FRONTEND_URL = 'http://your_frontend_url_here'
+
+DEFAULT_FROM_EMAIL = 'fitnessloyal69@gmail.com'
+
+MAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "nxloc2701@gmail.com"
+EMAIL_HOST_PASSWORD = "aimwnbmlhottouep"
+
+SITE_ID = 1
