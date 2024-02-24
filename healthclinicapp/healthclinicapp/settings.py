@@ -158,13 +158,9 @@ REST_FRAMEWORK = {
     )
 }
 
-CLIENT_ID = 'EyvfIPMhP7STvn3jBTnSs5czafW7wGPJPj4txSIk'
+CLIENT_ID = 'aOYVnYKtwekNsUau7SSCMmttSkJnH3EDBVJbIGKo'
 
-CLIENT_SECRET = 'adD4IboxqcsSWgoiADIerWpU62WQsLCzkhNBz4YQYqksPbFsrJr4gWI3jI7Zp2sn8BWMFTRrqfHgIVwG3SAyvy5TdMcult4iJ2sCLy81kcQn2o0w4NaQ6PQoxvcuP269'
-
-FRONTEND_URL = 'http://your_frontend_url_here'
-
-DEFAULT_FROM_EMAIL = 'fitnessloyal69@gmail.com'
+CLIENT_SECRET = 'fyIrxqcJNOzP4QSBZWg4OtA3ovmjfGV1KR0XuUhlIHTThhT4XiWxkv7mExbxppDyT9U8jVUssGlW9qVOUo3eRovHWpW2eEWjWSnktJHvlfRpJDt7Qokx3AHRSKfNTvbD'
 
 MAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -173,4 +169,4 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "nxloc2701@gmail.com"
 EMAIL_HOST_PASSWORD = "aimwnbmlhottouep"
 
-SITE_ID = 1
+SITE_ID=1

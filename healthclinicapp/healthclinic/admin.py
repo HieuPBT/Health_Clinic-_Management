@@ -34,6 +34,12 @@ class UserAdmin(BaseUserAdmin):
     filter_horizontal = ()
 
 
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ['user', 'department']
+    list_filter = ['shift', 'department']
+    search_fields = ['user__email', 'department']
+
+
 class PatientAdmin(admin.ModelAdmin):
     list_display = ['id', 'patient__full_name']
     readonly_fields = ['avatar']
@@ -44,6 +50,20 @@ class PatientAdmin(admin.ModelAdmin):
                 '<img src="/static/{url}" width="120" />'\
                     .format(url=obj.image.name)
             )
+
+
+class ScheduleAdmin(admin.ModelAdmin):
+    list_display = ['id', 'employee', 'shift', 'start_date', 'end_date']
+    ordering = ['id']
+    list_filter = ['shift']
+    search_fields = ['employee', 'shift']
+
+
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ['id', 'start_time', 'end_time']
+    search_fields = ['start_time', 'end_time']
+    list_filter = ['start_time', 'end_time']
+    ordering = ['id']
 
 
 class AppointmentAdmin(admin.ModelAdmin):
@@ -74,11 +94,12 @@ class PrescriptionAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Patient)
-admin.site.register(Employee)
-admin.site.register(Shift)
-admin.site.register(Schedule)
+admin.site.register(Employee, EmployeeAdmin)
+admin.site.register(Shift, ShiftAdmin)
+admin.site.register(Schedule, ScheduleAdmin)
 admin.site.register(Appointment, AppointmentAdmin)
 admin.site.register(Medicine, MedicineAdmin)
 admin.site.register(MedicineCategory, MedicineCategoryAdmin)
 admin.site.register(Prescription, PrescriptionAdmin)
 admin.site.register(PrescriptionMedicine)
+admin.site.register(Invoice)

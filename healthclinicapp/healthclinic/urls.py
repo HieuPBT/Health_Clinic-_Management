@@ -10,7 +10,6 @@ router.register('user', views.UserViewSet)
 router.register('appointment', views.AppointmentViewSet, basename='appointment')
 router.register('medicine', views.MedicineListViewSet, basename='medicine')
 router.register('prescription', views.PrescriptionViewSet)
-#router.register('prescriptionmedicine', views.PrescriptionMedicineViewSet)
 
 schema_view = get_schema_view(
     openapi.Info(

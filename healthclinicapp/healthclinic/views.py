@@ -4,12 +4,10 @@ import random
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import Group
-from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.tokens import default_token_generator
+from django.db.models import Q
 from django.core.mail import send_mail
-from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.views.decorators.csrf import csrf_exempt
 from oauth2_provider.contrib.rest_framework import TokenMatchesOASRequirements
 from django.utils.encoding import force_str
 
@@ -17,6 +15,7 @@ from functools import partial
 
 from django.http import Http404, HttpResponse
 from django.shortcuts import render
+from oauth2_provider.models import RefreshToken
 from rest_framework import viewsets, generics, status, views, parsers, permissions
 from rest_framework.decorators import action
 from healthclinic import perms
@@ -49,14 +48,12 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = models.User.objects.all()
     serializer_class = serializers.UserSerializer
     pagination_class = paginators.UserPagination
-    #permission_classes = [permissions.IsAuthenticated]
-    #parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
         # only allow any when create new user
         if self.action in ['create', 'forgot_password']:
             return [permissions.AllowAny()]
-        return [perms.OwnerAuthenticated()]
+        return [perms.OwnerAuthenticated()] # update_profile, get_profile, change_password
 
     # decorator
     # return current user data
@@ -115,20 +112,21 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         return Response({'detail': 'New password has been sent to your email address.'}, status=status.HTTP_200_OK)
 
 
-class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView ):
-    #queryset = models.Appointment.objects.filter(is_confirm=False).all()
+class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+    queryset = models.Appointment.objects.filter(status='CHƯA XÁC NHẬN')
     #serializer_class = serializers.AppointmentCreateSerializer
     permission_classes = [permissions.DjangoModelPermissions]
     pagination_class = paginators.AppointmentPagination
 
-    # def get_permissions(self):
-    #     if self.action in ['create', 'get_patient_appointment']:
-    #         return [partial(perms.IsInGroup(), allowed_groups=['PATIENT'])]
-    #     if self.request.method == 'PATCH' and self.request.user.role == "PATIENT":
-    #         return [perms.PatientOwner()]
-    #     if self.request.method == 'PATCH' and self.request.user.role == "NURSE":
-    #         return [perms.IsNurse()]
-    #     return [permissions.IsAuthenticated()]
+    def get_permissions(self):
+        if self.action in ['get_patient_appointment', 'cancel_appointment']:
+            return [perms.OwnerAuthenticated()]
+        if self.action in ['confirm_appointment']:
+            return [perms.IsNurse()]
+        if self.action in ['list']:
+            return [perms.IsEmployee()]
+
+        return [permissions.DjangoModelPermissions()]
 
     def perform_create(self, serializer):
         # Tự động gán bệnh nhân hiện tại vào cuộc hẹn mới
@@ -139,63 +137,123 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
             return serializers.AppointmentListSerializer
         # if self.action == 'list' and self.request.user.role == 'PATIENT':
         #     return serializers.AppointmentSerializer
-        if self.request.method == 'PATCH' and self.request.user.role == 'NURSE':
-            return serializers.AppointmentConfirmSerializer
-        if self.request.method == 'PATCH' and self.request.user.role == 'PATIENT':
-            return serializers.AppointmentDeleteSerializer
+        # if self.request.method == 'PATCH' and self.request.user.role == 'NURSE':
+        #     return serializers.AppointmentConfirmSerializer
+        # if self.request.method == 'PATCH' and self.request.user.role == 'PATIENT':
+        #     return serializers.AppointmentCancelSerializer
         return serializers.AppointmentCreateSerializer
 
-    def perform_update(self, serializer):
-        if self.request.method == 'PATCH' and 'confirmed_by' not in serializer.validated_data and self.request.user.role == 'NURSE':
-            # Gán ID của Nurse vào trường confirmed_by
-            serializer.validated_data['confirmed_by'] = self.request.user
-        serializer.save()
-
     def get_queryset(self):
-        # return appointment count base on date <- 100 appointment
-        queries = models.Appointment.objects.all()
-        q = self.request.query_params.get("b_date")
-        a = self.request.query_params.get("is_confirm")
-        b = self.request.query_params.get("is_pay")
-        c = self.request.query_params.get("is_cancel")
-        if q:  # return lists of appointment base on booking date
-            queries = queries.filter(booking_date=q, is_cancel=False)
-            return queries
-        if a:  # return lists of confirmed user appointment
-            queries = queries.filter(patient=self.request.user, is_confirm=a, is_cancel=False)
-            return queries
-        if b:  # return lists of paid user appointment
-            queries = queries.filter(patient=self.request.user, is_pay=b)
-            return queries
-        if c:  # return lists of canceled user appointment
-            queries = queries.filter(patient=self.request.user, is_cancel=True)
-            return queries
-        # return today confirmed appointment list for doctor
+        # return lists of today appointments for Doctor
         if self.request.user.role == 'DOCTOR':
-            return models.Appointment.objects.filter(is_confirm=True, is_cancel=False, booking_date=datetime.now().date())
-        if self.request.user.role == 'PATIENT':
-            return models.Appointment.objects.filter(patient=self.request.user).all()
-        return models.Appointment.objects.filter(is_confirm=False, is_cancel=False)
+            doctor = models.Employee.objects.get(user=self.request.user)
+            # Lấy ngày bắt đầu và kết thúc của các ca làm việc
+            doctor_schedules = models.Schedule.objects.filter(employee=doctor).values_list('start_date', 'end_date')
+            doctor_shift_ids = doctor_schedules.values_list('shift__id', flat=True)
+
+            # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
+            shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
+
+            # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
+            time_conditions = Q()
+            for start_time, end_time in shift_times:
+                time_conditions |= Q(booking_time__range=[start_time, end_time])
+
+            date_conditions = Q()
+            for start_date, end_date in doctor_schedules:
+                date_conditions |= Q(booking_date__range=[start_date, end_date])
+
+            # Lọc các cuộc hẹn dựa trên thời gian đặt cuộc hẹn nằm trong khoảng thời gian của các ca làm việc
+            return (models.Appointment.objects.filter(department=doctor.department, status='ĐÃ XÁC NHẬN', booking_date=datetime.now().date())
+                    .filter(time_conditions).filter(date_conditions))
+
+        # return lists of today appointments for Nurse
+        if self.request.user.role == 'NURSE':
+            nurse = models.Employee.objects.get(user=self.request.user)
+            # Lấy ngày bắt đầu và kết thúc của các ca làm việc
+            nurse_schedules = models.Schedule.objects.filter(employee=nurse).values_list('start_date', 'end_date')
+            nurse_shift_ids = nurse_schedules.values_list('shift__id', flat=True)
+
+            # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
+            shift_times = models.Shift.objects.filter(id__in=nurse_shift_ids).values_list('start_time', 'end_time')
+
+            # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
+            time_conditions = Q()
+            for start_time, end_time in shift_times:
+                time_conditions |= Q(booking_time__range=[start_time, end_time])
+
+            date_conditions = Q()
+            for start_date, end_date in nurse_schedules:
+                date_conditions |= Q(booking_date__range=[start_date, end_date])
+
+            # Lọc các cuộc hẹn dựa trên thời gian đặt cuộc hẹn nằm trong khoảng thời gian của các ca làm việc
+            return models.Appointment.objects.filter(status='CHƯA XÁC NHẬN').filter(time_conditions).filter(date_conditions)
+        # return lists of patient appointments
+        # if self.request.user.role == 'PATIENT':
+        #     return models.Appointment.objects.filter(patient=self.request.user).all()
+        # return lists of unconfirmed appointments for Nurse
+        return models.Appointment.objects.all()
 
     @action(detail=False, methods=['get'], url_path='patient_appointment', url_name='patient_appointment')
     def get_patient_appointment(self, request):
-
-        a = models.Appointment.objects.filter(patient=request.user).all()
+        appointments = models.Appointment.objects.filter(patient=request.user).all()
+        is_confirmed = self.request.query_params.get("is_confirm")  # ĐÃ XÁC NHẬN/CHƯA XÁC NHẬN
+        is_paid = self.request.query_params.get("is_pay")  # ĐÃ THANH TOÁN/CHƯA THANH TOÁN
+        is_canceled = self.request.query_params.get("is_cancel")  # ĐÃ HUỶ
+        if is_confirmed:  # return confirmed/unconfirmed user appointment
+            appointments = appointments.filter(status=is_confirmed)
+        if is_paid:  # return paid/unpaid user appointment
+            appointments = appointments.filter(status=is_paid)
+        if is_canceled:  # return lists of canceled user appointment
+            appointments = appointments.filter(status='ĐÃ HUỶ')
         paginator = paginators.AppointmentPagination()
-        result_page = paginator.paginate_queryset(a, request)
+        result_page = paginator.paginate_queryset(appointments, request)
         return paginator.get_paginated_response(serializers.AppointmentSerializer(result_page, many=True, context={'request': request}).data)
 
-    # def perform_create(self, serializer):
-    #     if 'patient' not in serializer.validated_data:
-    #         # Gán ID của User vào trường patient nếu không được cung cấp
-    #         serializer.validated_data['patient'] = self.request.user
-    #     serializer.save()
+    @action(detail=True, methods=['patch'], url_path='confirm', url_name='confirm')
+    def confirm_appointment(self, request, pk=None):
+        try:
+            appointment = models.Appointment.objects.get(pk=pk)
+        except models.Appointment.DoesNotExist:
+            return Response({"error": "Appointment not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # def perform_create(self, serializer):
-    #     serializer.is_valid(raise_exception=True)  # Xác nhận dữ liệu trước khi truy cập validated_data
-    #     # Gán ID của User vào trường patient nếu không được cung cấp
-    #     serializer.validated_data['patient'] = self.request.user.id
-    #     serializer.save()
+        # Sau khi xác nhận cuộc hẹn, gửi email thông báo cho bệnh nhân
+        subject = 'Xác nhận cuộc hẹn'
+        message = ('Xin chào {}\n'
+                    'Cuộc hẹn của bạn đã được xác nhận.\n'
+                   'Khoa khám bệnh: {}\n'
+                   'Thời gian: {}\n'
+                   'Ngày khám: {}').format(appointment.patient.full_name, appointment.department , appointment.booking_time, appointment.booking_date)
+        from_email = settings.EMAIL_HOST_USER
+        to_email = appointment.patient.email  # Địa chỉ email của bệnh nhân
+
+        send_mail(subject, message, from_email, [to_email], fail_silently=False)
+
+        appointment.status = 'ĐÃ XÁC NHẬN'
+        appointment.confirmed_by = self.request.user
+        appointment.save()
+
+        return Response({"detail": "Appointmnet confirmed"})
+
+    @action(detail=True, methods=['patch'], url_path='cancel', url_name='cancel')
+    def cancel_appointment(self, request, pk=None):
+        try:
+            appointment = models.Appointment.objects.get(pk=pk)
+        except models.Appointment.DoesNotExist:
+            return Response({"error": "Appointment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check permission to cancel appointment (optional)
+        if not perms.OwnerAuthenticated():
+            return Response({"error": "You don't have permission to cancel this appointment"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Update appointment status to cancelled
+        appointment.status = "ĐÃ HUỶ"
+        appointment.save()
+
+        # Serialize response
+        serializer = serializers.AppointmentCancelSerializer(appointment)
+        return Response(serializer.data)
 
 
 class AppointmentCountInNext30DaysAPIView(APIView):
@@ -216,38 +274,10 @@ class AppointmentCountInNext30DaysAPIView(APIView):
         return Response(counts)
 
 
-# class AppointmentConfirm(generics.RetrieveUpdateAPIView):
-#     queryset = models.Appointment.objects.all()
-#     permission_classes = [perms.IsNurse]
-#
-#     def get_serializer_class(self):
-#         if self.request.method == 'PATCH':
-#             return serializers.AppointmentConfirmSerializer
-#         return serializers.AppointmentSerializer
-#
-#     def perform_update(self, serializer):
-#         if self.request.method == 'PATCH' and 'confirmed_by' not in serializer.validated_data:
-#             # Gán ID của Nurse vào trường confirmed_by
-#             serializer.validated_data['confirmed_by'] = self.request.user
-#         serializer.save()
-
-
-# class MedicineFilter(django_filters.FilterSet):
-#     # Định nghĩa các trường mà bạn muốn cho phép lọc
-#     name = django_filters.CharFilter(lookup_expr='icontains')
-#     # Thêm các trường khác nếu cần
-#
-#     class Meta:
-#         model = models.Medicine
-#         fields = ['name',]  # Danh sách các trường bạn muốn lọc
-
-
 class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = models.Medicine.objects.all()
     serializer_class = serializers.MedicineSerializer
-    permission_classes = [perms.IsDoctor]
-    # filter_backends = [filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
-    # filterset_class = MedicineFilter
+    permission_classes = [permissions.DjangoModelPermissions]
 
     def get_queryset(self):
         queries = self.queryset
@@ -257,10 +287,10 @@ class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
         return queries
 
 
-class PrescriptionViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = models.Prescription.objects.all()
     serializer_class = serializers.PrescriptionSerializer
-    permission_classes = [perms.IsDoctor]
+    permission_classes = [permissions.DjangoModelPermissions]
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -271,12 +301,52 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Creat
         # Tự động gán bac si hiện tại vào toa thuoc mới
         serializer.save(doctor=self.request.user)
 
+        appointment = serializer.instance.appointment
+        appointment.status = "CHƯA THANH TOÁN"
+        appointment.save()
+
+    def get_permissions(self):
+        if self.action == 'get_patient_prescription':
+            return [perms.IsDocotor()]
+        if self.action in ['get_today_prescription', 'create_invoice']:
+            return [perms.IsNurse()]
+        return [permissions.DjangoModelPermissions()]
+
+    @action(detail=False, methods=['get'], url_path='today_prescription', url_name='today_prescription')
+    def get_today_prescription(self, request):
+        t = models.Prescription.objects.filter(created_date=datetime.now().date())
+        paginator = paginators.PrescriptionPagination()
+        result_page = paginator.paginate_queryset(t, request)
+        return paginator.get_paginated_response(
+            serializers.PrescriptionSerializer(result_page, many=True, context={'request': request}).data)
+
+    # patient history
     @action(detail=False, methods=['get'], url_path='patient_prescription', url_name='patient_prescription')
     def get_patient_prescription(self, request):
         p = models.Prescription.objects.all()
         q = self.request.query_params.get("patient")
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get("end_date")
+        if q:
+            p = p.filter(appointment__patient=q)
+            #return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)
         if q and start_date and end_date:
             p = p.filter(appointment__patient=q).filter(created_date__gte=start_date).filter(created_date__lte=end_date)
-        return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)
+            #return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)
+        paginator = paginators.PrescriptionPagination()
+        result_page = paginator.paginate_queryset(p, request)
+        return paginator.get_paginated_response(
+            serializers.PrescriptionSerializer(result_page, many=True, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='invoice', url_name='prescription_invoice')
+    def create_invoice(self, request, pk):
+        prescription = self.get_object()
+        serializer = serializers.InvoiceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(nurse=request.user, prescription=prescription)
+
+        appointment = prescription.appointment
+        appointment.status = "ĐÃ THANH TOÁN"
+        appointment.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

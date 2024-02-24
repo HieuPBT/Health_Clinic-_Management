@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, AbstractUser
 from django.utils import timezone
@@ -69,18 +71,21 @@ class Shift(BaseModel):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    def __str__(self):
+        return "{} - {}".format(self.start_time.__str__(), self.end_time.__str__())
+
 
 class Employee(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    Department = models.CharField(max_length=100, choices=Department.choices)
-    shift = models.ManyToManyField(Shift)
+    department = models.CharField(max_length=100, choices=Department.choices)
+    shift = models.ManyToManyField(Shift, through='Schedule')
 
     def __str__(self):
         return self.user.email
 
 
 class Schedule(BaseModel):
-    doctor = models.ForeignKey(User, on_delete=models.RESTRICT)
+    employee = models.ForeignKey(Employee, on_delete=models.RESTRICT)
     shift = models.ForeignKey(Shift, on_delete=models.RESTRICT)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -95,7 +100,7 @@ class Appointment(BaseModel):
     confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='nurse_confirm')
 
     class Meta:
-        unique_together = ['patient', 'booking_date', 'booking_time']
+        unique_together = ['patient', 'department', 'booking_date', 'booking_time']
 
     def __str__(self):
         return "{}_{}".format(self.patient.full_name.__str__(), self.patient.phone_number.__str__())

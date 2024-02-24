@@ -51,6 +51,7 @@ class UserSerializer(serializers.ModelSerializer):
             models.Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
 
         user.groups.add(Group.objects.get(name='PATIENT'))
+        user.save()
         return user
 
     def update(self, instance, validated_data):
@@ -106,7 +107,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Appointment
-        fields = '__all__'  # Loại bỏ trường 'patient' từ trường fields
+        fields = '__all__'
 
     def get_patient(self, appointment):
         patient_data = UserListSerializer(appointment.patient, context=self.context).data
@@ -114,18 +115,11 @@ class AppointmentListSerializer(serializers.ModelSerializer):
         return patient_data
 
 
-class AppointmentConfirmSerializer(serializers.ModelSerializer):
+class AppointmentCancelSerializer(serializers.ModelSerializer):
     # nurse confirm appointment
     class Meta:
         model = models.Appointment
-        fields = ['is_confirm', 'confirmed_by']
-
-
-class AppointmentDeleteSerializer(serializers.ModelSerializer):
-    # nurse confirm appointment
-    class Meta:
-        model = models.Appointment
-        fields = ['is_cancel']
+        fields = ['status']
 
 
 class MedicineSerializer(serializers.ModelSerializer):
@@ -182,3 +176,9 @@ class PrescriptionCreateSerializer(serializers.ModelSerializer):
             models.PrescriptionMedicine.objects.create(prescription=prescription, **medicine_data)
         return prescription
 
+
+class InvoiceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Invoice
+        exclude = ['nurse', 'prescription']

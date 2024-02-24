@@ -14,7 +14,6 @@ from healthclinicapp import settings
 @receiver(post_save, sender=get_user_model())
 def send_activation_email(sender, instance, created, **kwargs):
     if created:
-        current_site = Site.objects.get_current()
         subject = 'Activate your account'
         message= render_to_string('email/account_activate.html', {
             'user': instance,

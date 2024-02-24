@@ -15,3 +15,7 @@ class AppointmentPagination(PageNumberPagination):
 
 class PrescriptionPagination(PageNumberPagination):
     page_size = 10
+
+
+class InvoicePagination(PageNumberPagination):
+    page_size = 10
