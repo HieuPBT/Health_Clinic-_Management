@@ -2,21 +2,7 @@ import React, { useContext, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import CustomButton from '../../../components/CustomButton/CustomButton';
 import AppointmentContext from '../Context';
-
-const departments = [
-  { id: 1, name: 'Phòng khám nội khoa' },
-  { id: 2, name: 'Phòng khám ngoại khoa' },
-  { id: 3, name: 'Phòng khám da liễu' },
-  { id: 4, name: 'Phòng khám nội khoa' },
-  { id: 5, name: 'Phòng khám ngoại khoa' },
-  { id: 6, name: 'Phòng khám da liễu' },
-  { id: 7, name: 'Phòng khám nội khoa' },
-  { id: 8, name: 'Phòng khám ngoại khoa' },
-  { id: 9, name: 'Phòng khám da liễu' },
-  { id: 10, name: 'Phòng khám nội khoa' },
-  { id: 11, name: 'Phòng khám ngoại khoa' },
-  { id: 12, name: 'Phòng khám da liễu' },
-];
+import { departments } from '../../../configs/configs';
 
 const DepartmentSelectionScreen = ({ isEditing = false }) => {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
@@ -34,7 +20,7 @@ const DepartmentSelectionScreen = ({ isEditing = false }) => {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.departmentItem} onPress={() => handleDepartmentSelect(item)}>
-      <Text>{item.name}</Text>
+      <Text>{item.nameDisplay}</Text>
     </TouchableOpacity>
   );
 
@@ -47,7 +33,7 @@ const DepartmentSelectionScreen = ({ isEditing = false }) => {
         keyExtractor={(item) => item.id.toString()}
       />
       <Text style={styles.selectedDepartment}>
-        {selectedDepartment ? selectedDepartment.name : 'Chưa chọn'}
+        {selectedDepartment ? selectedDepartment.nameDisplay : 'Chưa chọn'}
       </Text>
       {isEditing ? <CustomButton title="Sửa xong" disabled={!selectedDepartment} onPress={() => { setStep(4); handleConfirmationSelect() }} /> : <CustomButton title="Tiếp" disabled={!selectedDepartment} onPress={handleConfirmationSelect} />}
     </View>

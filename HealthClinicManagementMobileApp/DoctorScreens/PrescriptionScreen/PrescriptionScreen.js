@@ -1,60 +1,56 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import CustomInput from '../../components/CustomInput/CustomInput';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import Context from '../../Context';
 import axios from 'axios';
 import API, { endpoints } from '../../configs/API';
+import showSuccessToast from '../../utils/ShowSuccessToast';
+import showFailedToast from '../../utils/ShowFailedToast';
+
+const { height } = Dimensions.get('window');
 
 const PrescriptionScreen = ({ route, navigation }) => {
     const { accessToken } = useContext(Context);
 
     const [symptom, setSymptom] = useState('');
     const [conclusion, setConclusion] = useState('');
-    const [medicines, setMedicines] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [dose, setDose] = useState('');
-    const [quantity, setQuantity] = useState('');
+    const [medicinesToPost, setMedicinesToPost] = useState([]);
+    const [medicinesToRender, setMedicinesToRender] = useState([]);
+    const [quantity, setQuantity] = useState(null);
     const [instructions, setInstructions] = useState('');
     const [medicineInfoInputVisible, setMedicinesInfoInputVisible] = useState(false);
     const [selectedMedicine, setSelectedMedicine] = useState();
     const [medicineData, setMedicineData] = useState([]);
+    const [isPrescriptionSuccess, setPrescriptionSuccess] = useState(false);
 
-    const { patientID } = route.params;
-    console.log(patientID);
+    const { patientID, appointment } = route.params;
 
     // Function to add medicine to the prescription
     const addMedicine = (medicine) => {
-        if (!medicines.some(item => item.medicine === medicine.name)) {
-            setMedicines([...medicines, { medicine: medicine.name, quantity: quantity, note: instructions, unit: medicine.unit }]);
+        if (!medicinesToRender.some(item => item.medicine === medicine.name)) {
+            setMedicinesToPost([...medicinesToPost, { medicine: medicine.id, quantity: quantity }]);
+            setMedicinesToRender([...medicinesToRender, { medicine: medicine.name, quantity: quantity, unit: medicine.unit }])
             // Clear input fields after adding medicine
-            setDose('');
         }
-        setQuantity('');
+        setQuantity(null);
         setInstructions('');
     };
 
-    // Dummy data for medicines
-    // const medicineData = [
-    //     { id: '1', name: 'Medicine 1', unit: 'Viên' },
-    //     { id: '2', name: 'Medicine 3', unit: 'Viên' },
-    //     { id: '3', name: 'Medicine 4', unit: 'Viên' },
-    //     { id: '4', name: 'Medicine 5', unit: 'Viên' },
-    //     { id: '5', name: 'Medicine 6', unit: 'Viên' },
-    //     { id: '6', name: 'Medicine 7', unit: 'Viên' },
-    //     { id: '7', name: 'Medicine 8', unit: 'Viên' },
-    //     // Add more medicines here
-    // ];
     useEffect(() => {
         const searchMedicine = async () => {
-            const res = await API.get(endpoints['medicine'] + '?name=' + searchQuery, {
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken
-                }
-            });
-            console.log(res.data);
-            setMedicineData(res.data.results);
+            try{
+                const res = await API.get(endpoints['medicine'] + '?name=' + searchQuery, {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                });
+                setMedicineData(res.data.results);
+            } catch(err){
+                console.log(err);
+            }
         }
         if (searchQuery != '')
             searchMedicine();
@@ -66,64 +62,98 @@ const PrescriptionScreen = ({ route, navigation }) => {
         </TouchableOpacity>
     );
     const removeMedicine = (index) => {
-        const updatedMedicines = [...medicines];
+        let updatedMedicines = [...medicinesToPost];
         updatedMedicines.splice(index, 1);
-        setMedicines(updatedMedicines);
+        setMedicinesToPost(updatedMedicines);
+
+        updatedMedicines = [...medicinesToRender];
+        updatedMedicines.splice(index, 1);
+        setMedicinesToRender(updatedMedicines);
     };
 
-    const prescribing = () => {
-        navigation.navigate('Ra toa')
+    const prescribing = async () => {
+        const data = {
+            "appointment": appointment,
+            "description": symptom,
+            "conclusion": conclusion,
+            "medicine_list": medicinesToPost
+        }
+        try {
+            const res = await API.post(endpoints['prescriptions'], data, {
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            })
+
+            if (res.status == 201) {
+                showSuccessToast(`Kê toa thành công! Lịch hẹn ${appointment}`);
+                setPrescriptionSuccess(true);
+            }
+        } catch (err) {
+            // if(err.response.status == 404){
+
+            // }
+            console.log(err);
+            showFailedToast('Kê toa thất bại');
+            setPrescriptionSuccess(false);
+        }
+        // navigation.navigate('Ra toa')
     }
+    useEffect(() => {
+        if (isPrescriptionSuccess !== null) {
+            navigation.navigate('Kê toa', { 'success': isPrescriptionSuccess, 'prescribed_appointment_id': appointment });
+        }
+    }, [isPrescriptionSuccess]);
 
     return (
         <View style={styles.container}>
-            <TextInput style={styles.searchInput} placeholder={"Triệu chứng"} onChangeText={(value) => { setSymptom(value) }} value={symptom} />
-            <TextInput style={styles.searchInput} placeholder={"Kết luận"} onChangeText={(value) => { setConclusion(value) }} value={conclusion} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Tìm kiếm thuốc"
-                value={searchQuery}
-                onChangeText={(text) => setSearchQuery(text)}
+            <View style={{ height: height * 0.4 }}>
+                <TextInput style={styles.searchInput} placeholder={"Triệu chứng"} onChangeText={(value) => { setSymptom(value) }} value={symptom} />
+                <TextInput style={styles.searchInput} placeholder={"Kết luận"} onChangeText={(value) => { setConclusion(value) }} value={conclusion} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Tìm kiếm thuốc"
+                    value={searchQuery}
+                    onChangeText={(text) => setSearchQuery(text)}
 
-            />
-            {medicineInfoInputVisible && <>
-                <Text>{selectedMedicine.name}</Text>
-                <View style={styles.medicineDetail}>
-                    <View style={styles.medicineQuantity}>
-                        <TextInput
-                            style={styles.smallInput}
-                            placeholder="Số lượng"
-                            value={quantity}
-                            onChangeText={(text) => setQuantity(text)}
-                            keyboardType='numeric'
-                        />
+                />
+                {medicineInfoInputVisible && <>
+                    <Text>{selectedMedicine.name}</Text>
+                    <View style={styles.medicineDetail}>
+                        <View style={styles.medicineQuantity}>
+                            <TextInput
+                                style={styles.smallInput}
+                                placeholder="Số lượng"
+                                value={quantity}
+                                onChangeText={(text) => setQuantity(text)}
+                                keyboardType='numeric'
+                            />
+                        </View>
+
+                        <View style={[styles.note, { paddingHorizontal: 5 }]}>
+                            <TextInput
+                                style={styles.smallInput}
+                                placeholder="Ghi chú"
+                                value={instructions}
+                                onChangeText={(text) => setInstructions(text)}
+                            />
+                        </View>
+
+                        <View style={{ flex: 0.3 }}>
+                            <CustomButton
+                                title={"Thêm"}
+                                onPress={() => { addMedicine(selectedMedicine); setMedicinesInfoInputVisible(false) }}
+                                disabled={quantity ? false : true}
+                            />
+                        </View>
                     </View>
-
-                    <View style={[styles.note, { paddingHorizontal: 5 }]}>
-                        <TextInput
-                            style={styles.smallInput}
-                            placeholder="Ghi chú"
-                            value={instructions}
-                            onChangeText={(text) => setInstructions(text)}
-                        />
-                    </View>
-
-                    <View style={{ flex: 0.3 }}>
-                        <CustomButton
-                            title={"Thêm"}
-                            onPress={() => { addMedicine(selectedMedicine); setMedicinesInfoInputVisible(false) }}
-                            disabled={quantity ? false : true}
-                        />
-                    </View>
-                </View>
-            </>}
-
-
-            <FlatList
-                data={medicineData}
-                renderItem={renderMedicineItem}
-                keyExtractor={item => item.id}
-            />
+                </>}
+                <FlatList
+                    data={medicineData}
+                    renderItem={renderMedicineItem}
+                    keyExtractor={item => item.id}
+                />
+            </View>
             <View style={styles.prescription}>
                 <Text style={styles.prescriptionTitle}>Toa thuốc - Mã bệnh nhân: {patientID}</Text>
                 <Text>Triệu chứng: {symptom}</Text>
@@ -136,10 +166,13 @@ const PrescriptionScreen = ({ route, navigation }) => {
                     <Text style={styles.button}></Text>
                 </View>
                 <ScrollView style={{ marginTop: 10 }}>
-                    {medicines.map((medicine, index) => (
+                    {medicinesToRender.map((medicine, index) => (
                         <View key={index}>
                             <View style={styles.medicineDetail}>
-                                <Text style={styles.medicineName}>{index + 1}. {medicine.medicine}</Text>
+                                <View style={styles.medicineName}>
+                                    <Text style={{ alignSelf: 'flex-start' }}>{index + 1}. </Text>
+                                    <Text style={{ flex: 1, textAlign: 'center' }}>{medicine.medicine}</Text>
+                                </View>
                                 <Text style={styles.medicineQuantity}>{medicine.quantity}</Text>
                                 <Text style={styles.medicineUnit}>{medicine.unit}</Text>
                                 <TouchableOpacity onPress={() => removeMedicine(index)} style={styles.button}>
@@ -154,7 +187,7 @@ const PrescriptionScreen = ({ route, navigation }) => {
                     ))}
                 </ScrollView>
             </View>
-            <CustomButton title={"Ra toa"} onPress={prescribing} style={{ marginTop: 10 }} disabled={symptom && conclusion && medicines ? false : true} />
+            <CustomButton title={"Kê toa"} onPress={prescribing} style={{ marginTop: 10 }} disabled={symptom && conclusion && medicinesToPost ? false : true} />
         </View>
     );
 };
@@ -184,8 +217,8 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ccc',
     },
     prescription: {
-        marginTop: 20,
-        maxHeight: 230
+        // marginTop: 20,
+        maxHeight: 300
     },
     prescriptionTitle: {
         fontSize: 18,
@@ -206,7 +239,9 @@ const styles = StyleSheet.create({
     },
     medicineName: {
         flex: 0.4,
-        textAlign: 'center'
+        textAlign: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between'
     },
     medicineQuantity: {
         flex: 0.2,

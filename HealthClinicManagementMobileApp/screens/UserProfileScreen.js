@@ -1,20 +1,11 @@
-import React, { useContext, useEffect } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
 import Context from '../Context';
 import formatDate from '../utils/FormatDateFromYMD';
 import API, { endpoints } from '../configs/API';
-
-const fakeData = {
-  email: "anekngiuenhat@gmail.com",
-  name: "Nguyễn Xuân Lộc",
-  phoneNumber: "0362655091",
-  dateOfBirth: "24/02/2024",
-  gender: "Nam",
-  avatarSource: "file:///data/user/0/host.exp.exponent/cache/ExperienceData/%2540anonymous%252FHealthClinicManagementMobileApp-bd031218-4e1b-4143-a9dc-0fc70f83ab32/ImagePicker/2b0800f9-c5a2-4d95-8a4e-6530be46b1d9.jpeg",
-  healthInsurance: "8434848464",
-  address: "Gia Lai"
-}
+import { NavigationContainer } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const renderItem = () => {
   return (
@@ -24,64 +15,63 @@ const renderItem = () => {
   )
 }
 
-const UserProfileScreen = ({preview = false, userId, userData }) => {
-  const { setAuthenticated, accessToken, setUserData } = useContext(Context);
-  console.log(userData);
-  useEffect(()=>{
-    console.log(accessToken)
-    loadUser = async()=>{
-      const res = await API.get(endpoints['current_user'], {
-        headers: {
-          'Authorization': 'bearer ' + accessToken
-        }
-      });
-
-      setUserData(res.data);
+const UserProfileScreen = ({ preview = false, userId, userDataParam, route }) => {
+  const { setAuthenticated, accessToken, setUserData, userData, role } = useContext(Context);
+  const [userDataToRender, setUserDataToRender] = useState();
+  useEffect(() => {
+    if (!preview) {
+      setUserDataToRender(userData);
+    } else {
+      setUserDataToRender(userDataParam);
     }
-    if(!preview)
-      loadUser();
-  },[accessToken])
-  try {
-  } catch(ex){
-    console.error(ex);
-  }
-  return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Thông tin người dùng</Text>
-      <View style={styles.profileInfo}>
-        <View style={styles.avatarContainer}>
-          {userData && <Image source={{ uri: userData.avatar }} style={styles.avatar} />}
-          {!userData && <Text style={styles.avatarPlaceholder}>No Avatar</Text>}
-        </View>
-        <Text style={styles.name}>{userData.full_name}</Text>
+    // console.log(userData)
 
-        <View style={styles.wrapper}>
-          <Text style={styles.label}>Số điện thoại:</Text>
-          <Text style={styles.value}>{userData.phone_number}</Text>
+  }, [accessToken, route.params])
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('access_token');
+    await AsyncStorage.removeItem('refresh_token');
+    setAuthenticated(false);
+  }
+
+  return (
+    <>
+      {userDataToRender ? <View style={styles.container}>
+        <View style={styles.profileInfo}>
+          <View style={styles.avatarContainer}>
+            {userDataToRender['avatar'] != null ? <Image source={{ uri: userDataToRender['avatar'] }} style={styles.avatar} /> : <Image source={require('../assets/images/default_user_avatar.webp')} style={styles.avatar} />}
+            {/* {!userDataToRender && <Text style={styles.avatarPlaceholder}>No Avatar</Text>} */}
+          </View>
+          <Text style={styles.name}>{userDataToRender['full_name']}</Text>
+
+          <View style={styles.wrapper}>
+            <Text style={styles.label}>Số điện thoại:</Text>
+            <Text style={styles.value}>{userDataToRender['phone_number']}</Text>
+          </View>
+          <View style={styles.wrapper}>
+            <Text style={styles.label}>Địa chỉ email:</Text>
+            <Text style={styles.value}>{userDataToRender['email']}</Text>
+          </View>
+          <View style={styles.wrapper}>
+            <Text style={styles.label}>Ngày sinh:</Text>
+            <Text style={styles.value}>{formatDate(userDataToRender['date_of_birth'])}</Text>
+          </View>
+          <View style={styles.wrapper}>
+            <Text style={styles.label}>Giới tính:</Text>
+            <Text style={styles.value}>{userDataToRender['gender'] == 'MALE' ? 'Nam' : userDataToRender['gender'] == 'FEMALE' ? 'Nữ' : 'Khác'}</Text>
+          </View>
+          {userDataToRender.patient ? <View style={styles.wrapper}>
+            <Text style={styles.label}>Số bảo hiểm y tế:</Text>
+            <Text style={styles.value}>{userDataToRender.patient.health_insurance}</Text>
+          </View> : null}
+          <View style={styles.wrapper}>
+            <Text style={styles.label}>Địa chỉ:</Text>
+            <Text style={styles.value}>{userDataToRender['address']}</Text>
+          </View>
         </View>
-        <View style={styles.wrapper}>
-          <Text style={styles.label}>Địa chỉ email:</Text>
-          <Text style={styles.value}>{userData.email}</Text>
-        </View>
-        <View style={styles.wrapper}>
-          <Text style={styles.label}>Ngày sinh:</Text>
-          <Text style={styles.value}>{userData.date_of_birth}</Text>
-        </View>
-        <View style={styles.wrapper}>
-          <Text style={styles.label}>Giới tính:</Text>
-          <Text style={styles.value}>{userData.gender}</Text>
-        </View>
-        {userData.patient?<View style={styles.wrapper}>
-          <Text style={styles.label}>Số bảo hiểm y tế:</Text>
-          <Text style={styles.value}>{userData.patient.health_insurance}</Text>
-        </View>:null}
-        <View style={styles.wrapper}>
-          <Text style={styles.label}>Địa chỉ:</Text>
-          <Text style={styles.value}>{userData.address}</Text>
-        </View>
-      </View>
-      {!preview ? <CustomButton title="Đăng xuất" style={{}} onPress={() => { setAuthenticated(false) }} /> : null}
-    </View>
+        {!preview && role != 'PATIENT' ? <CustomButton title="Đăng xuất" style={{}} onPress={handleLogout} /> : null}
+      </View> : <ActivityIndicator />}
+    </>
   );
 };
 

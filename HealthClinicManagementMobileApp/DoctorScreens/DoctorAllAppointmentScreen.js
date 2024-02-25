@@ -1,37 +1,72 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
 import { COLORS } from '../configs/configs';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import MedicalHistoryScreen from './MedicalHistoryScreen';
 import PrescriptionScreen from './PrescriptionScreen/PrescriptionScreen';
+import Context from '../Context';
+import { slots } from '../configs/configs';
+import API, { endpoints } from '../configs/API';
 
-const DoctorAllAppointmentScreen = ({navigation}) => {
-    const [appointments, setAppointments] = useState([
-        { id: 1, date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 2, date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-        { id: 3, date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 4, date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-        { id: 5, date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 6, date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-    ]);
+const DoctorAllAppointmentScreen = ({ navigation, route }) => {
+    const { accessToken } = useContext(Context);
+
+    const [appointments, setAppointments] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
 
-    const handleCancelAppointment = (id) => {
-        Alert.alert(
-            'Xác nhận hủy lịch hẹn',
-            'Bạn có chắc chắn muốn hủy lịch hẹn này?',
-            [
-                { text: 'Hủy', style: 'cancel' },
-                { text: 'Xác nhận', onPress: () => cancelAppointment(id) },
-            ],
-            { cancelable: false }
-        );
+
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+
+
+
+    const loadAppointments = async () => {
+        setLoading(true);
+        try {
+
+            const response = await API.get(`${endpoints['appointments']}?page=${page}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            });
+            console.log(response.data.results)
+            setAppointments([...appointments, ...response.data.results]);
+            setPage(page + 1);
+        } catch (error) {
+            console.log(page)
+            console.log('Error fetching:', error);
+            if (error.response.status === 404) {
+                setPage(null);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const prescribing = (id) => {
-        setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
+    useEffect(() => {
+        if (accessToken) { // Kiểm tra accessToken có tồn tại trước khi gọi loadAppointments()
+            setAppointments([]);
+            setPage(1);
+            loadAppointments();
+        }
+    }, [accessToken]);
+
+    // Hàm để hiển thị activity indicator khi đang tải dữ liệu
+    const renderFooter = () => {
+        return loading ? <ActivityIndicator size="large" color="#0000ff" /> : null;
     };
+
+    useEffect(() => {
+        const prescribing = (id) => {
+            setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
+        };
+        if (route.params) {
+            var { prescribed_appointment_id, success } = route.params;
+            // if (success)
+                prescribing(prescribed_appointment_id);
+        }
+    }, [route.params])
 
 
     const toggleModal = () => {
@@ -43,17 +78,17 @@ const DoctorAllAppointmentScreen = ({navigation}) => {
         <View style={styles.itemContainer}>
             <View style={styles.row}>
                 <Text style={styles.itemText}>Bệnh nhân: </Text>
-                <TouchableOpacity onPress={() => { navigation.navigate('ViewMedicalHistory', {"patientID": item.patientID}) }}>
+                <TouchableOpacity onPress={() => { navigation.navigate('ViewMedicalHistory', { "patientID": item.patient.id, userData: item.patient }) }}>
                     <Text style={styles.viewProfileBtn}>
-                        {item.patientID}
+                        {item.patient.full_name}
                     </Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.row}>
-                <Text style={styles.itemText}>Ngày: {item.date}</Text>
-                <Text style={styles.itemText}> - Giờ: {item.time}</Text>
+                <Text style={styles.itemText}>Ngày: {item.booking_date}</Text>
+                <Text style={styles.itemText}> - Giờ: {slots[item.booking_time].time}</Text>
             </View>
-            <CustomButton title="Ra toa" onPress={() => navigation.navigate('Prescription', {"patientID": item.patientID})} />
+            <CustomButton title="Kê toa" onPress={() => navigation.navigate('Prescription', { "patientID": item.patient.id, 'appointment': item.id })} />
         </View>
     );
 
@@ -64,6 +99,9 @@ const DoctorAllAppointmentScreen = ({navigation}) => {
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={{ paddingVertical: 20 }}
+                ListFooterComponent={renderFooter}
+                onEndReached={page ? loadAppointments : null}
+                onEndReachedThreshold={0.1}
             />
         </View>
     );

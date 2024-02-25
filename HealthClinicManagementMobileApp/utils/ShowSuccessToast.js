@@ -1,11 +1,14 @@
 import Toast from "react-native-toast-message";
-const showSuccessToast = (message) => {
+const showSuccessToast = (message, text) => {
     Toast.show({
         type: 'success',
         text1: message,
+        text2: text,
         text1Style: {
             fontSize: 18,
-            padding: 10
+        },
+        text2Style: {
+            fontSize: 16,
         },
         topOffset: 100,
 

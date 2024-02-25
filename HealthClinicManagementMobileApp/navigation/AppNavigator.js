@@ -3,16 +3,20 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 // import Auth from '../components/auth/Auth';
 import HomeScreen from '../screens/HomeScreen';
 import AppointmentScreen from '../screens/AppointmentScreen/AppointmentScreen';
-import UserProfileScreen from '../screens/UserProfileScreen';
+// import UserProfileScreen from '../screens/UserProfileScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AllAppointmentScreen from '../screens/AllAppointmentScreen/AllAppointmentScreen';
 import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
+import Context from '../Context';
+import ArticleList from '../components/ArticleList/ArticleList';
+import UserProfileNavigator from './UserProfileNavigator';
 
 
 
 const Tab = createBottomTabNavigator();
 
 const AppNavigator = () => {
+  const { userData } = useContext(Context);
   return (
     <Tab.Navigator >
       <Tab.Screen name="Trang Chủ" component={HomeScreen} options={{
@@ -33,11 +37,18 @@ const AppNavigator = () => {
         ),
         tabBarButton: CustomTabButton
       }} />
-      <Tab.Screen name="Tài Khoản" component={UserProfileScreen} options={{
+      <Tab.Screen name="Tài Khoản" component={UserProfileNavigator} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="person" color={color} size={size} />
         ),
-        tabBarButton: CustomTabButton
+        tabBarButton: CustomTabButton,
+        headerShown: false
+      }} />
+
+      <Tab.Screen name="Tin tức" component={ArticleList} options={{
+        tabBarItemStyle: {
+          display: 'none'
+        }
       }} />
     </Tab.Navigator>
   );

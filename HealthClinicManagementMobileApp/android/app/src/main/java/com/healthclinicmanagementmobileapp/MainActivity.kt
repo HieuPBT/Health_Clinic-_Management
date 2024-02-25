@@ -1,4 +1,5 @@
 package com.healthclinicmanagementmobileapp
+import com.reactlibrary.RNMomosdkPackage;
 
 import android.os.Build
 import android.os.Bundle

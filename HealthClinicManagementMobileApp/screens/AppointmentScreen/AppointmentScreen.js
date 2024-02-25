@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 
 import AppointmentContext from './Context';
 import DepartmentSelectionScreen from './Steps/DepartmentSelectionScreen';
@@ -7,9 +7,15 @@ import AppointmentTimePickerScreen from './Steps/AppointmentTimePickerScreen';
 import AppointmentConfirmationScreen from './Steps/AppointmentConfirmationScreen';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import { View } from 'react-native';
+import API, { endpoints } from '../../configs/API';
+import Context from '../../Context';
+import showSuccessToast from '../../utils/ShowSuccessToast';
+import formatDate from '../../utils/DMYtoYMD';
+import showFailedToast from '../../utils/ShowFailedToast';
 
 
-const AppointmentScreen = () => {
+const AppointmentScreen = ({ navigation }) => {
+  const { accessToken } = useContext(Context);
   const [department, setDepartment] = useState('');
   const [date, setDate] = useState('');
   const [shift, setShift] = useState();
@@ -17,8 +23,32 @@ const AppointmentScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [step, setStep] = useState(1);
 
-  const handleAppointmentConfirm = () => {
-    
+  const handleAppointmentConfirm = async () => {
+    try {
+      const res = await API.post(endpoints['appointments'], {
+        "department": department.name,
+        "booking_date": (date),
+        "booking_time": shift.time
+      }, {
+        headers: {
+          'Authorization': 'Bearer ' + accessToken
+        }
+      })
+
+      if (res.status == 201) {
+        showSuccessToast('Đặt lịch thành công!');
+        // navigation.navigate('Lịch khám của tôi', { isChanged: true });
+      }
+
+      setStep(1);
+      setIsEditing(false);
+    }
+    catch (err) {
+      console.log(err);
+      if (err.response.status == 500) {
+        showFailedToast('Bạn đã đặt lịch này rồi, vui lòng kiểm tra lại!');
+      }
+    }
   }
   const renderStep = () => {
     switch (step) {
@@ -44,8 +74,8 @@ const AppointmentScreen = () => {
         return (
           <AppointmentContext.Provider value={{ department, date, shift, setStep, setIsEditing }}>
             <AppointmentConfirmationScreen />
-            <View style={{padding: 10}}>
-              <CustomButton title="Xác nhận" onPress={handleAppointmentConfirm}/>
+            <View style={{ padding: 10 }}>
+              <CustomButton title="Xác nhận" onPress={handleAppointmentConfirm} />
             </View>
           </AppointmentContext.Provider>
         );

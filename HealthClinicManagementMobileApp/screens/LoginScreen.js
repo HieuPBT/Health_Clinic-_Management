@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import CustomInput from '../components/CustomInput/CustomInput';
 import CustomButton from '../components/CustomButton/CustomButton';
-import { COLORS } from '../configs/configs';
+import { COLORS, client_id, client_secret } from '../configs/configs';
 import { CheckBox, Image } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 import RegisterScreen from './RegisterScreen/RegisterScreen';
@@ -11,44 +11,57 @@ import Context from '../Context';
 import API, { endpoints } from '../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import showFailedToast from '../utils/ShowFailedToast';
+import showSuccessToast from '../utils/ShowSuccessToast';
 
 
-const LoginScreen = ({navigation}) => {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isKeepLogin, setIsKeepLogin] = useState(false);
+  const [isKeepLogin, setIsKeepLogin] = useState(true);
   const [textSecure, setTextSecure] = useState(true);
 
-  const { authenticated, setAuthenticated, setRole, setAccesstoken } = useContext(Context);
+  const { authenticated, setAuthenticated, setRole, setAccesstoken, setUserData, userData } = useContext(Context);
   const handleLogin = async () => {
-    // Xử lý đăng nhập ở đây
-    setAuthenticated(true);
-    console.log('Login pressed');
-
     try {
       const formData = new FormData();
       formData.append("grant_type", "password");
       formData.append("password", password);
       formData.append("username", email);
-      formData.append("client_id", "cjezkWORQd4XfiK4nYzKmGlKjWQ1ZsaIIv1SMQtr")
-      formData.append("client_secret", "PE8zhlFh1Hy3RUzQASqpxvRAVYLwH1Cl4oilr9h95m7q49c1LFF3Pi6uHU97YRzS4JEXVcvkEsWem8wfOd7OC0SfSfTqY5iwcik2VzeY9T8I1ROnq8uQVdU8XWUOJ4Pk");
+      formData.append("client_id", client_id);
+      formData.append("client_secret", client_secret);
       const res = await API.post(endpoints['login'],
         formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       })
-      if (res.status === 400) {
-        showFailedToast('Sai tài khoản hoặc mật khẩu');
-      } else {
-        const accessToken = res.data.access_token;
-        const refreshToken = res.data.refresh_token;
-        setAccesstoken(accessToken);
-        await AsyncStorage.setItem('access_token', accessToken);
+      setAuthenticated(true);
+      const accessToken = res.data.access_token;
+      const refreshToken = res.data.refresh_token;
+      setAccesstoken(accessToken);
+      await AsyncStorage.setItem('access_token', accessToken);
+      if (isKeepLogin)
         await AsyncStorage.setItem('refresh_token', refreshToken);
+
+      showSuccessToast('Đăng nhập thành công');
+      loadUser = async () => {
+        const res = await API.get(endpoints['profile'], {
+          headers: {
+            'Authorization': 'bearer ' + accessToken
+          }
+        });
+        setUserData(res.data);
+        setRole(res.data.role);
+        console.log(userData)
       }
+      loadUser();
     } catch (ex) {
-      console.info(ex)
+      console.info(ex);
+      if (ex.response.status === 400) {
+        showFailedToast('Sai tài khoản hoặc mật khẩu');
+      } else if (ex.response.status == 401) {
+        showFailedToast('Email chưa được xác thực', 'Vui lòng kiểm tra email để xác thực');
+      }
     }
   };
   return (
@@ -59,6 +72,7 @@ const LoginScreen = ({navigation}) => {
         icon="mail"
         onChangeText={(text) => setEmail(text)}
         value={email}
+        keyboardType={'email-address'}
       />
       <CustomInput
         placeholder="Mật khẩu"
@@ -72,7 +86,7 @@ const LoginScreen = ({navigation}) => {
         rightIconPressOutHandler={() => { setTextSecure(true) }}
       />
       <View style={styles.row_container}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={()=>{navigation.navigate('Quên mật khẩu')}}>
           <Text>Quên mật khẩu?</Text>
         </TouchableOpacity>
         <View style={styles.checkboxContainer}>
@@ -83,7 +97,7 @@ const LoginScreen = ({navigation}) => {
         </View>
       </View>
       <View style={[Styles.row_container, styles.loginButton]}>
-        <CustomButton title="Đăng nhập" onPress={handleLogin} />
+        <CustomButton title="Đăng nhập" onPress={handleLogin} disabled={password ? false : true} />
       </View>
       <View style={styles.OAuth2Style}>
         <Text style={Styles.textStyle}>Hoặc đăng nhập bằng</Text>

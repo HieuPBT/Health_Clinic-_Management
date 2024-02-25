@@ -50,7 +50,7 @@ const RegisterScreen = ({ navigation }) => {
     formData.append('full_name', name);
     formData.append('phone_number', phoneNumber);
     formData.append('date_of_birth', dateOfBirth);
-    formData.append('gender', 'MALE');
+    formData.append('gender', gender == 'Nam' ? 'MALE' : gender == 'Nữ' ? 'FEMALE' : 'OTHER');
     formData.append('avatar', {
       uri: avatarSource,
       type: 'image/jpeg', // Thay đổi type tùy thuộc vào định dạng ảnh
@@ -68,15 +68,16 @@ const RegisterScreen = ({ navigation }) => {
         },
       })
       if (res.status == 201) {
-        showSuccessToast('Tạo tài khoản thành công!');
+        showSuccessToast('Tạo tài khoản thành công!', 'Vui lòng kiểm tra email để xác thực');
         navigation.navigate('Đăng nhập');
-      } else if (res.status == 400) {
-        showFailedToast('Email này đã được đăng ký');
-      } else if (res.status == 500) {
-        showFailedToast('Server đang bị lỗi, vui lòng thử lại sau');
       }
     } catch (ex) {
-      console.error(ex);
+      if (ex.response.status == 400) {
+        showFailedToast('Email này đã được đăng ký');
+      } else if (ex.response.status == 500) {
+        showFailedToast('Server đang bị lỗi, vui lòng thử lại sau');
+      }
+      console.log(ex);
     }
 
   }
@@ -106,12 +107,12 @@ const RegisterScreen = ({ navigation }) => {
       case 4:
         return (
           <>
-            <UserProfileScreen userData={{
+            <UserProfileScreen userDataParam={{
               email: email,
               password: password,
               avatar: avatarSource,
               full_name: name,
-              gender: gender,
+              gender: gender == 'Nam' ? 'MALE' : gender == 'Nữ' ? 'FEMALE' : 'OTHER',
               phone_number: phoneNumber,
               date_of_birth: dateOfBirth,
               address: address,
@@ -122,6 +123,7 @@ const RegisterScreen = ({ navigation }) => {
             <View style={Styles1.buttonContainer}>
               <CustomButton title="Tạo tài khoản" onPress={() => {
                 createAccount();
+                logInformation();
               }} />
               <CustomButton title="Sửa thông tin" color={COLORS.dark_green} style={Styles1.navBtn} onPress={() => setStep(1)} />
             </View>

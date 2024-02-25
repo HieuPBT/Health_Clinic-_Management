@@ -12,6 +12,8 @@ const AppointmentConfirmationScreen = () => {
     department: department,
   };
 
+  console.log(appointmentInfo);
+
   const handleEditDepartment = () => {
     setStep(1);
     setIsEditing(true);
@@ -33,21 +35,24 @@ const AppointmentConfirmationScreen = () => {
 
       <View style={styles.infoContainer}>
         <TouchableOpacity style={styles.btn} onPress={handleEditDate}>
-          <Text style={styles.infoText}>Ngày:     {appointmentInfo.date}</Text>
+          <Text style={{flex: 0.2}}>Ngày:</Text>
+          <Text style={styles.infoText}>{appointmentInfo.date}</Text>
           <Icon name='pencil' size={24}/>
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoContainer}>
         <TouchableOpacity style={styles.btn} onPress={handleEditTime}>
-          <Text style={styles.infoText}>Giờ:       {appointmentInfo.time}</Text>
+          <Text style={{flex: 0.2}}>Giờ:</Text>
+          <Text style={styles.infoText}>{appointmentInfo.time.time}</Text>
           <Icon name='pencil' size={24}/>
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoContainer}>
         <TouchableOpacity style={styles.btn} onPress={handleEditDepartment}>
-          <Text style={styles.infoText}>Khoa:    {appointmentInfo.department.name}</Text>
+          <Text style={{flex: 0.2}}>Khoa:</Text>
+          <Text style={styles.infoText}>{appointmentInfo.department.nameDisplay}</Text>
           <Icon name='pencil' size={24}/>
         </TouchableOpacity>
       </View>
@@ -84,6 +89,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 16,
     paddingVertical: 30,
+    flex: 0.7
   },
   editLink: {
     color: 'blue',

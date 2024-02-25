@@ -10,6 +10,7 @@ import SearchPatientScreen from '../DoctorScreens/SearchPatientScreen';
 import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
 import PrescriptionScreen from '../DoctorScreens/PrescriptionScreen/PrescriptionScreen';
 import PatientProfileDoctorViewScreen from '../DoctorScreens/PatientProfileDoctorViewScreen';
+import ArticleList from '../components/ArticleList/ArticleList';
 
 
 
@@ -24,7 +25,7 @@ const DoctorAppNavigator = () => {
         ),
         tabBarButton: CustomTabButton
       }} />
-      <Tab.Screen name='Ra toa' component={DoctorAllAppointmentScreen} options={{
+      <Tab.Screen name='Kê toa' component={DoctorAllAppointmentScreen} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="receipt" color={color} size={size} />
         ),
@@ -54,6 +55,12 @@ const DoctorAppNavigator = () => {
           display: 'none'
         },
         title: 'Lịch sử bệnh án'
+      }} />
+
+      <Tab.Screen name="Tin tức" component={ArticleList} options={{
+        tabBarItemStyle: {
+          display: 'none'
+        }
       }} />
     </Tab.Navigator>
   );

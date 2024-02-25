@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react
 import CustomButton from '../components/CustomButton/CustomButton';
 import { COLORS } from '../configs/configs';
 
-const InvoiceScreen = () => {
+const InvoiceScreen = ({navigation}) => {
     const [appointments, setAppointments] = useState([
         { id: 1, department: 'Nội khoa', date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
         { id: 2, department: 'Răng hàm mặt', date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
@@ -32,7 +32,7 @@ const InvoiceScreen = () => {
                 <Text style={styles.itemText}>Ngày: {item.date}</Text>
                 <Text style={styles.itemText}> - Giờ: {item.time}</Text>
             </View>
-            <CustomButton title="Xuất hóa đơn" onPress={() => invoice(item.id)} />
+            <CustomButton title="Xuất hóa đơn" onPress={() => navigation.navigate('Thanh toán')} />
         </View>
     );
 
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     },
     itemContainer: {
         marginBottom: 20,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: '#ccc',
         padding: 10,
         borderRadius: 5,
