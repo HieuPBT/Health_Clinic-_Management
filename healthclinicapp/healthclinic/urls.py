@@ -25,6 +25,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', include(router.urls)),
     path('appointment_count/', views.AppointmentCountInNext30DaysAPIView.as_view()),
+    path('appointment_available_time/', views.AppointmentAvailableBookingTime.as_view()),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
             schema_view.without_ui(cache_timeout=0),
             name='schema-json'),

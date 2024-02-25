@@ -1,5 +1,5 @@
 import string
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 import random
 
 import pytz
@@ -19,7 +19,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from oauth2_provider.models import RefreshToken
 from rest_framework import viewsets, generics, status, views, parsers, permissions
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from healthclinic import perms
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -44,6 +44,28 @@ def activate(request, uidb64, token):
         return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
     else:
         return HttpResponse('Activation link is invalid!')
+
+
+class AvailableAppointmentListAPIView(APIView):
+    permission_classes = [permissions.AllowAny]  # Cho phép mọi người truy cập API này
+
+    def get(self, request):
+        # Lấy danh sách các lịch hẹn đã được đặt cho một khoa cụ thể trong khoảng thời gian đã xác định
+        current_date = datetime.now().date()
+        thirty_days_from_now = current_date + timedelta(days=30)
+        booked_appointments = models.Appointment.objects.filter(
+            department=self.request.data,
+            booking_date__range=[current_date, thirty_days_from_now]
+        ).exclude(status='ĐÃ HUỶ')  # Lọc các lịch hẹn đã được đặt và không bị hủy
+
+        # Tạo một danh sách của tất cả các thời gian có thể trong khoảng thời gian đã xác định
+        all_appointment_times = [datetime.combine(current_date, time) for time in Appointment.TIME_CHOICES]
+
+        # Tạo một danh sách của các thời gian còn khả dụng bằng cách loại bỏ các thời gian đã được đặt
+        available_times = [time for time in all_appointment_times if time not in booked_appointments.values_list('booking_time', flat=True)]
+
+        # Trả về danh sách các thời gian còn khả dụng
+        return Response(available_times)
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -277,7 +299,31 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         return Response(serializer.data)
 
 
+class AppointmentAvailableBookingTime(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        allowed_booking_times = [
+            time(7, 0), time(7, 30), time(8, 0), time(8, 30), time(9, 0),
+            time(9, 30), time(10, 0), time(10, 30), time(11, 0), time(11, 30),
+            time(13, 0), time(13, 30), time(14, 0), time(14, 30), time(15, 0),
+            time(15, 30), time(16, 0), time(16, 30), time(17, 0), time(17, 30)
+        ]
+        booking_date = request.query_params.get('date')  # Get the booking date from the query parameters
+        department = request.query_params.get('department')
+        if booking_date and department:
+            # If booking_date is provided, filter available booking times based on that date
+            booked_times = models.Appointment.objects.filter(booking_date=booking_date, department=department).values_list('booking_time', flat=True)
+            available_booking_times = [time for time in allowed_booking_times if time not in booked_times]
+            # If no booking_date is provided, return all available booking times
+            return Response(available_booking_times)
+        # Return the available booking times in the response
+        return Response(status.HTTP_204_NO_CONTENT)
+
+
 class AppointmentCountInNext30DaysAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         # Tính ngày hiện tại và ngày sau 30 ngày
         bangkok_timezone = pytz.timezone('Asia/Bangkok')
