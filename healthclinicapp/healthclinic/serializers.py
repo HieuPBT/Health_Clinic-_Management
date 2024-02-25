@@ -46,12 +46,11 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         patient_data = validated_data.pop('patient', None) # Extract patient data if exists
         user = models.User.objects.create_user(**validated_data) # Create the user
-        user.is_active = False # require account verification to login
+         # require account verification to login
         if patient_data:
             models.Patient.objects.create(user=user, **patient_data) # Create associated patient if data exists
 
         user.groups.add(Group.objects.get(name='PATIENT'))
-        user.save()
         return user
 
     def update(self, instance, validated_data):
@@ -84,6 +83,20 @@ class UserListSerializer(serializers.ModelSerializer):
             if request: # url -> uri
                 return request.build_absolute_uri(settings.CLOUDINARY_BASE_URL % customuser.avatar)
             return settings.CLOUDINARY_BASE_URL % customuser.avatar
+
+
+class UserAppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.User
+        fields = ['id', 'email', 'full_name']
+
+
+class NurseAppointmentSerializer(serializers.ModelSerializer):
+    patient = UserAppointmentSerializer()
+
+    class Meta:
+        model = models.Appointment
+        exclude = ['updated_date', 'confirmed_by', 'created_date']
 
 
 class AppointmentSerializer(serializers.ModelSerializer):

@@ -1,12 +1,14 @@
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 
+import pytz
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from oauth2_provider.contrib.rest_framework import TokenMatchesOASRequirements
 from django.utils.encoding import force_str
@@ -53,7 +55,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         # only allow any when create new user
         if self.action in ['create', 'forgot_password']:
             return [permissions.AllowAny()]
-        return [perms.OwnerAuthenticated()] # update_profile, get_profile, change_password
+        return [perms.OwnerAuthenticated()]  # update_profile, get_profile, change_password
 
     # decorator
     # return current user data
@@ -62,15 +64,15 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         return Response(serializers.UserListSerializer(request.user).data)
 
     @action(detail=False, methods=['patch'], url_path='update_profile', url_name='update_profile')
-    def change_profile(self, request):
+    def update_profile(self, request):
         user = models.User.objects.get(email=self.request.user)
         serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
-    @action(detail=False, methods=['patch'], url_path='change_password', url_name='change_password')
-    def change_password(self, request):
+    @action(detail=False, methods=['patch'], url_path='update_password', url_name='change_password')
+    def update_password(self, request):
         user = models.User.objects.get(email=self.request.user)
         old_password = request.data.get('old_password', None)
         new_password = request.data.get('new_password', None)
@@ -114,7 +116,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
     queryset = models.Appointment.objects.filter(status='CHƯA XÁC NHẬN')
-    #serializer_class = serializers.AppointmentCreateSerializer
+    # serializer_class = serializers.AppointmentCreateSerializer
     permission_classes = [permissions.DjangoModelPermissions]
     pagination_class = paginators.AppointmentPagination
 
@@ -133,10 +135,10 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         serializer.save(patient=self.request.user)
 
     def get_serializer_class(self):
-        if self.action == 'list' and self.request.user.role in ['DOCTOR', 'NURSE']:
+        if self.action == 'list' and self.request.user.role in ['DOCTOR']:
             return serializers.AppointmentListSerializer
-        # if self.action == 'list' and self.request.user.role == 'PATIENT':
-        #     return serializers.AppointmentSerializer
+        if self.action == 'list' and self.request.user.role == 'NURSE':
+            return serializers.NurseAppointmentSerializer
         # if self.request.method == 'PATCH' and self.request.user.role == 'NURSE':
         #     return serializers.AppointmentConfirmSerializer
         # if self.request.method == 'PATCH' and self.request.user.role == 'PATIENT':
@@ -146,52 +148,71 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
     def get_queryset(self):
         # return lists of today appointments for Doctor
         if self.request.user.role == 'DOCTOR':
-            doctor = models.Employee.objects.get(user=self.request.user)
-            # Lấy ngày bắt đầu và kết thúc của các ca làm việc
-            doctor_schedules = models.Schedule.objects.filter(employee=doctor).values_list('start_date', 'end_date')
-            doctor_shift_ids = doctor_schedules.values_list('shift__id', flat=True)
+            try:
+                doctor = models.Employee.objects.get(user=self.request.user)
+                # Lấy ngày bắt đầu và kết thúc của các ca làm việc
+                doctor_schedules = models.Schedule.objects.filter(employee=doctor).values_list('start_date', 'end_date')
+                doctor_shift_ids = doctor_schedules.values_list('shift__id', flat=True)
+                doctor_shifts = models.Shift.objects.filter(schedule__employee=doctor)
 
-            # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
-            shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
+                # Lấy thời gian hiện tại
+                bangkok_timezone = pytz.timezone('Asia/Bangkok')
+                current_datetime = datetime.now().astimezone(bangkok_timezone)
 
-            # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
-            time_conditions = Q()
-            for start_time, end_time in shift_times:
-                time_conditions |= Q(booking_time__range=[start_time, end_time])
+                # Lấy giờ từ thời gian hiện tại
+                current_time = current_datetime.time()
 
-            date_conditions = Q()
-            for start_date, end_date in doctor_schedules:
-                date_conditions |= Q(booking_date__range=[start_date, end_date])
+                # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
+                shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
 
-            # Lọc các cuộc hẹn dựa trên thời gian đặt cuộc hẹn nằm trong khoảng thời gian của các ca làm việc
-            return (models.Appointment.objects.filter(department=doctor.department, status='ĐÃ XÁC NHẬN', booking_date=datetime.now().date())
-                    .filter(time_conditions).filter(date_conditions))
+                # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
+                time_conditions = Q()
+                for start_time, end_time in shift_times:
+                    time_conditions |= Q(booking_time__range=[start_time, end_time])
+
+                date_conditions = Q()
+                for start_date, end_date in doctor_schedules:
+                    date_conditions |= Q(booking_date__range=[start_date, end_date])
+
+                for shift in doctor_shifts:
+                    # Nếu giờ hiện tại nằm trong khoảng thời gian của ca làm việc, trả về danh sách cuộc hẹn chưa được xác nhận
+                    if shift.start_time <= current_time <= shift.end_time:
+                        return (models.Appointment.objects.filter(department=doctor.department, status='ĐÃ XÁC NHẬN',
+                                                                  booking_date=current_datetime.date())
+                                .filter(time_conditions).filter(date_conditions))
+
+                    return models.Appointment.objects.none()
+
+            except models.Employee.DoesNotExist:
+                return Response(status.HTTP_204_NO_CONTENT)
 
         # return lists of today appointments for Nurse
         if self.request.user.role == 'NURSE':
-            nurse = models.Employee.objects.get(user=self.request.user)
-            # Lấy ngày bắt đầu và kết thúc của các ca làm việc
-            nurse_schedules = models.Schedule.objects.filter(employee=nurse).values_list('start_date', 'end_date')
-            nurse_shift_ids = nurse_schedules.values_list('shift__id', flat=True)
+            if self.request.user.role == 'NURSE':
+                try:
+                    # Lấy thông tin y tá đăng nhập
+                    nurse = models.Employee.objects.get(user=self.request.user)
+                    nurse_shifts = models.Shift.objects.filter(schedule__employee=nurse)
 
-            # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
-            shift_times = models.Shift.objects.filter(id__in=nurse_shift_ids).values_list('start_time', 'end_time')
+                    # Lấy thời gian hiện tại
+                    bangkok_timezone = pytz.timezone('Asia/Bangkok')
+                    current_datetime = datetime.now().astimezone(bangkok_timezone)
 
-            # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
-            time_conditions = Q()
-            for start_time, end_time in shift_times:
-                time_conditions |= Q(booking_time__range=[start_time, end_time])
+                    # Lấy giờ từ thời gian hiện tại
+                    current_time = current_datetime.time()
 
-            date_conditions = Q()
-            for start_date, end_date in nurse_schedules:
-                date_conditions |= Q(booking_date__range=[start_date, end_date])
+                    # Kiểm tra xem giờ hiện tại có nằm trong bất kỳ ca làm việc nào của y tá không
+                    for shift in nurse_shifts:
+                        # Nếu giờ hiện tại nằm trong khoảng thời gian của ca làm việc, trả về danh sách cuộc hẹn chưa được xác nhận
+                        if shift.start_time <= current_time <= shift.end_time:
+                            return models.Appointment.objects.filter(status='CHƯA XÁC NHẬN')
 
-            # Lọc các cuộc hẹn dựa trên thời gian đặt cuộc hẹn nằm trong khoảng thời gian của các ca làm việc
-            return models.Appointment.objects.filter(status='CHƯA XÁC NHẬN').filter(time_conditions).filter(date_conditions)
-        # return lists of patient appointments
-        # if self.request.user.role == 'PATIENT':
-        #     return models.Appointment.objects.filter(patient=self.request.user).all()
-        # return lists of unconfirmed appointments for Nurse
+                    # Nếu không nằm trong bất kỳ ca làm việc nào, trả về danh sách rỗng
+                    return models.Appointment.objects.none()
+
+                except models.Employee.DoesNotExist:
+                    return Response(status.HTTP_204_NO_CONTENT)
+
         return models.Appointment.objects.all()
 
     @action(detail=False, methods=['get'], url_path='patient_appointment', url_name='patient_appointment')
@@ -259,7 +280,9 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
 class AppointmentCountInNext30DaysAPIView(APIView):
     def get(self, request):
         # Tính ngày hiện tại và ngày sau 30 ngày
-        today = datetime.now().date()
+        bangkok_timezone = pytz.timezone('Asia/Bangkok')
+        current_datetime = datetime.now().astimezone(bangkok_timezone)
+        today = current_datetime.date()
         thirty_days_from_now = today + timedelta(days=30)
 
         # Lọc và đếm các booking trong khoảng thời gian từ ngày hiện tại đến 30 ngày sau
@@ -314,9 +337,21 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(detail=False, methods=['get'], url_path='today_prescription', url_name='today_prescription')
     def get_today_prescription(self, request):
-        t = models.Prescription.objects.filter(created_date=datetime.now().date())
+        # Lấy thời gian hiện tại
+        bangkok_timezone = pytz.timezone('Asia/Bangkok')
+        current_datetime = datetime.now().astimezone(bangkok_timezone)
+
+        # Lọc các đơn thuốc đã tạo vào ngày hiện tại
+        prescriptions_today = models.Prescription.objects.filter(created_date=current_datetime.date())
+
+        # Lọc các đơn thuốc mà chưa có hóa đơn tương ứng
+        prescriptions_without_invoice = prescriptions_today.exclude(invoice__isnull=False)
+
+        # Sử dụng paginator để phân trang nếu cần
         paginator = paginators.PrescriptionPagination()
-        result_page = paginator.paginate_queryset(t, request)
+        result_page = paginator.paginate_queryset(prescriptions_without_invoice, request)
+
+        # Trả về phản hồi cho các đơn thuốc không có hóa đơn tương ứng
         return paginator.get_paginated_response(
             serializers.PrescriptionSerializer(result_page, many=True, context={'request': request}).data)
 

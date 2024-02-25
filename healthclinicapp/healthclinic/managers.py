@@ -24,6 +24,7 @@ class CustomUserManager(BaseUserManager):
 
         user = self.model(email=email, **other_fields)
         user.set_password(password)
+        user.is_active = False
         user.save()
         return user
 
