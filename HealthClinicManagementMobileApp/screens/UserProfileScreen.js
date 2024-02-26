@@ -22,11 +22,12 @@ const UserProfileScreen = ({ preview = false, userId, userDataParam, route }) =>
     if (!preview) {
       setUserDataToRender(userData);
     } else {
+      console.log(userDataParam)
       setUserDataToRender(userDataParam);
     }
-    // console.log(userData)
 
-  }, [accessToken, route.params])
+  }, [accessToken])
+  console.log(userDataToRender)
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('access_token');

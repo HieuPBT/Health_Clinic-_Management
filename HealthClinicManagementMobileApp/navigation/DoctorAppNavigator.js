@@ -11,6 +11,8 @@ import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
 import PrescriptionScreen from '../DoctorScreens/PrescriptionScreen/PrescriptionScreen';
 import PatientProfileDoctorViewScreen from '../DoctorScreens/PatientProfileDoctorViewScreen';
 import ArticleList from '../components/ArticleList/ArticleList';
+import MedicalHistoryItem from '../components/MedicalHistoryItem/MedicalHistoryItem';
+import MedicalHistoryScreen from '../DoctorScreens/MedicalHistoryScreen';
 
 
 
@@ -55,6 +57,21 @@ const DoctorAppNavigator = () => {
           display: 'none'
         },
         title: 'Lịch sử bệnh án'
+      }} />
+
+      <Tab.Screen name="ViewMedicalHistoryDetails" component={MedicalHistoryItem} options={{
+        tabBarItemStyle: {
+          display: 'none'
+        },
+        title: 'Chi tiết lịch sử'
+      }} />
+
+
+      <Tab.Screen name="MedicalHistoryScreen" component={MedicalHistoryScreen} options={{
+        tabBarItemStyle: {
+          display: 'none'
+        },
+        // title: 'Chi tiết lịch sử'
       }} />
 
       <Tab.Screen name="Tin tức" component={ArticleList} options={{

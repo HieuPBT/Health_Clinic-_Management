@@ -1,12 +1,16 @@
-import React, { useContext, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import AppointmentContext from '../Context';
 import CustomButton from '../../../components/CustomButton/CustomButton';
 import { COLORS, afternoonSlots, morningSlots } from '../../../configs/configs';
+import Context from '../../../Context';
+import API, { endpoints } from '../../../configs/API';
 
 const AppointmentTimePickerScreen = ({ isEditing = false }) => {
+    const { accessToken } = useContext(Context);
+    const { setStep, setShift, date, department } = useContext(AppointmentContext);
     const [selectedTime, setSelectedTime] = useState('');
-    const { setStep, setShift } = useContext(AppointmentContext);
+    const [enabledSlots, setEnabledSlots] = useState([]);
 
     const handleSelectTime = (time) => {
         setSelectedTime(time);
@@ -17,38 +21,88 @@ const AppointmentTimePickerScreen = ({ isEditing = false }) => {
         setStep(4);
     };
 
+    const isSlotEnabled = (time) => enabledSlots.includes(time);
+
+    useEffect(() => {
+        const loadEnabledSlots = async () => {
+            try {
+                const res = await API.get(endpoints['available_times'](date, department.name), {
+                    headers: {
+                        Authorization: 'Bearer ' + accessToken
+                    }
+                })
+                setEnabledSlots(res.data);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+        loadEnabledSlots();
+    }, [accessToken, date, department])
+    function addColonAndZeros(str) {
+        return str + ":00";
+    }
     return (
         <View style={styles.container}>
             <View style={{ flex: 1 }}>
 
                 <Text style={styles.title}>Chọn khung giờ khám</Text>
-
-                <Text style={styles.sectionTitle}>Buổi sáng:</Text>
-                <View style={styles.timeSlotContainer}>
-                    {morningSlots.map(slot => (
-                        <TouchableOpacity
-                            key={slot.id}
-                            style={[styles.timeSlot, slot.time === selectedTime.time ? styles.selected : slot.disabled ? styles.disabled : null]}
-                            onPress={() => handleSelectTime(slot)}
-                            disabled={slot.disabled}>
-                            <Text>{slot.time}</Text>
-                        </TouchableOpacity>
-                    ))}
+                <View style={styles.timeSlotType}>
+                    <View
+                        style={[styles.timeSlot]}
+                    >
+                        <Text>Có thể chọn</Text>
+                    </View>
+                    <View
+                        style={[styles.timeSlot, styles.selected]}
+                    >
+                        <Text>Đang chọn</Text>
+                    </View>
+                    <View
+                        style={[styles.timeSlot, styles.disabled]}
+                    >
+                        <Text>Kín khung giờ</Text>
+                    </View>
                 </View>
+                <Text style={styles.sectionTitle}>Buổi sáng:</Text>
+                {enabledSlots.length > 0 ? <>
+                    <View style={styles.timeSlotContainer}>
+                        {morningSlots.map(slot => (
+                            <TouchableOpacity
+                                key={slot.id}
+                                style={[
+                                    styles.timeSlot,
+                                    (slot.time === selectedTime.time && isSlotEnabled(addColonAndZeros(slot.time))) ? styles.selected : // Nếu slot đang được chọn và enabled
+                                        (!isSlotEnabled(addColonAndZeros(slot.time)) ? styles.disabled : null) // Nếu slot bị disable
+                                ]}
+                                onPress={() => { (slot.time) && handleSelectTime(slot) }} // Chỉ xử lý onPress nếu slot được enable
+                                disabled={!isSlotEnabled(addColonAndZeros(slot.time))} // Disable TouchableOpacity nếu slot bị disable
+                            >
+                                <Text>{slot.time}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </> : <ActivityIndicator />}
 
                 <Text style={styles.sectionTitle}>Buổi chiều:</Text>
-                <View style={styles.timeSlotContainer}>
-                    {afternoonSlots.map(slot => (
-                        <TouchableOpacity
-                            key={slot.id}
-                            style={[styles.timeSlot, slot.time === selectedTime.time ? styles.selected : slot.disabled ? styles.disabled : null]}
-                            onPress={() => handleSelectTime(slot)}
-                            disabled={slot.disabled}
-                        >
-                            <Text>{slot.time}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+
+                {enabledSlots.length > 0 ? <>
+                    <View style={styles.timeSlotContainer}>
+                        {afternoonSlots.map(slot => (
+                            <TouchableOpacity
+                                key={slot.id}
+                                style={[
+                                    styles.timeSlot,
+                                    (slot.time === selectedTime.time && isSlotEnabled(addColonAndZeros(slot.time))) ? styles.selected : // Nếu slot đang được chọn và enabled
+                                        (!isSlotEnabled(addColonAndZeros(slot.time)) ? styles.disabled : null) // Nếu slot bị disable
+                                ]}
+                                onPress={() => { (slot.time) && handleSelectTime(slot) }} // Chỉ xử lý onPress nếu slot được enable
+                                disabled={!isSlotEnabled(addColonAndZeros(slot.time))} // Disable TouchableOpacity nếu slot bị disable
+                            >
+                                <Text>{slot.time}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </> : <ActivityIndicator />}
             </View>
 
             {isEditing ? <CustomButton title="Sửa xong" disabled={!selectedTime} onPress={handleConfirmTime} /> : <CustomButton title="Tiếp" onPress={handleConfirmTime} disabled={!selectedTime} />}
@@ -67,9 +121,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         paddingBottom: 10,
         marginBottom: 10,
-        borderBottomColor: '#aaa',
-        borderBottomWidth: 1.5,
-        borderStyle: 'dashed'
     },
     sectionTitle: {
         fontSize: 18,
@@ -81,6 +132,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+        borderWidth: 1.5,
+        borderColor: '#aaa',
+        borderStyle: 'dashed',
+        borderRadius: 8,
+        flex: 0.45,
+        paddingVertical: 40
+    },
+    timeSlotType: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
         padding: 8,
     },
     timeSlot: {
@@ -88,8 +152,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 5,
-        marginBottom: 10,
-        marginRight: 10,
+        // marginBottom: 10,
+        margin: 5,
     },
     selected: {
         backgroundColor: 'lightblue',
@@ -98,5 +162,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#ccc',
     },
 });
+
 
 export default AppointmentTimePickerScreen;

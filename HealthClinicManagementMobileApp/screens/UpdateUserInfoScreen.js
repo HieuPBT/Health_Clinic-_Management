@@ -5,7 +5,7 @@ import CustomInput from '../components/CustomInput/CustomInput';
 import CustomDatePicker from '../components/CustomDatePicker/CustomDatePicker';
 import GenderInput from '../components/GenderInput/GenderInput';
 import ValidateInformation from '../utils/Validate';
-import Nomalize from '../utils/Nomalize';
+import Normalize from '../utils/Normalize';
 import AvatarPicker from '../components/AvatarPicker/AvatarPicker';
 import DateInput from '../components/DateInput/DateInput';
 import DatePicker from 'react-native-datepicker';
@@ -111,7 +111,7 @@ const UpdateUserInfoScreen = ({ navigation }) => {
                     onChangeText={(text) => handleInputChange('full_name', text)}
                     style={{ marginTop: 10 }}
                     blurHandler={() => {
-                        handleInputChange('full_name', Nomalize.nameNormalize(editedUserInfo.full_name))
+                        handleInputChange('full_name', Normalize.nameNormalize(editedUserInfo.full_name))
                     }}
                 />
                 <CustomInput

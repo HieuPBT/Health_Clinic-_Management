@@ -10,7 +10,7 @@ import Styles from '../../../styles/Styles';
 import Styles1 from '../Styles';
 import CustomButton from '../../../components/CustomButton/CustomButton';
 import ValidateInformation from '../../../utils/Validate';
-import Nomalize from '../../../utils/Nomalize';
+import Normalize from '../../../utils/Normalize';
 import formatDateToYMD from '../../../utils/formatDateToYYYYMMDD';
 const Step1 = () => {
     const { name, setName, email, setEmail, phoneNumber, setPhoneNumber, dateOfBirth, setDateOfBirth, gender, setGender, setStep, address, setAddress, healthInsurance, setHealthInsurance } = useContext(MyContext);
@@ -24,7 +24,7 @@ const Step1 = () => {
                     onChangeText={(text) => setName(text)}
                     value={name}
                     blurHandler={() => {
-                        setName(Nomalize.nameNormalize(name));
+                        setName(Normalize.nameNormalize(name));
                     }}
                 />
                 <CustomInput

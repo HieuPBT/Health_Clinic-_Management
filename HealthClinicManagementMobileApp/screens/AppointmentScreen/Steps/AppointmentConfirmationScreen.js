@@ -12,8 +12,6 @@ const AppointmentConfirmationScreen = () => {
     department: department,
   };
 
-  console.log(appointmentInfo);
-
   const handleEditDepartment = () => {
     setStep(1);
     setIsEditing(true);

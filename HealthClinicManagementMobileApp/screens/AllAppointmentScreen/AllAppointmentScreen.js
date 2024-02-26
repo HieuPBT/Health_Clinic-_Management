@@ -6,8 +6,9 @@ import API, { endpoints } from '../../configs/API';
 import Context from '../../Context';
 import formatDate from '../../utils/FormatDateFromYMD';
 import TopTab from '../../components/TopTab/TopTab';
+import Normalize from '../../utils/Normalize';
 
-const AllAppointmentScreen = ({ route }) => {
+const AllAppointmentScreen = ({ route, navigation }) => {
     const { accessToken } = useContext(Context);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -30,8 +31,28 @@ const AllAppointmentScreen = ({ route }) => {
     });
 
 
-    const handleCancelAppointment = (id) => {
-        // Implement your cancel appointment logic here
+    const cancelAppointment = async (id) => {
+        try {
+            const res = await API.patch(
+                endpoints['cancel_appointment'](id),
+                null, // Thân yêu cầu trống vì không có dữ liệu được gửi cùng yêu cầu PATCH
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                }
+            );
+
+            if (res.status === 200) {
+                showSuccessToast(`Hủy thành công lịch hẹn ${id}!`);
+                setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
+            }
+        } catch (err) {
+            console.log(err);
+            if (err.response.status === 500) {
+                showFailedToast('Hủy thất bại!');
+            }
+        }
     };
 
     const loadAppointments = async (tab) => {
@@ -67,13 +88,13 @@ const AllAppointmentScreen = ({ route }) => {
     const getQueryParams = (tab) => {
         switch (tab) {
             case 2:
-                return 'is_confirm=True';
+                return 'is_confirm=ĐÃ XÁC NHẬN';
             case 3:
-                return 'is_confirm=False';
+                return 'is_confirm=CHƯA XÁC NHẬN';
             case 4:
-                return 'is_pay=True';
+                return 'is_pay=ĐÃ THANH TOÁN';
             case 5:
-                return 'is_pay=False';
+                return 'is_pay=CHƯA THANH TOÁN';
             case 6:
                 return 'is_cancel=True';
             default:
@@ -110,38 +131,44 @@ const AllAppointmentScreen = ({ route }) => {
             // Viết logic để xử lý xem hóa đơn ở đây
         };
 
-        const handleResetAppointment = (id) => {
-            // Viết logic để đặt lại cuộc hẹn ở đây
+        const handleResetAppointment = (appointmentInfo) => {
+            navigation.navigate('Đặt Lịch Khám')
         };
 
         const renderButton = () => {
-            if (item.is_cancel) {
+            if (item['status'] == "ĐÃ HUỶ") {
                 return (
-                    <CustomButton title={"Đặt lại"} color={COLORS.green_primary} fsize={17} onPress={() => handleResetAppointment(item.id)} />
+                    <CustomButton title={"Đặt lại"} color={COLORS.green_primary} fsize={17} onPress={() => handleResetAppointment(item)} />
                 );
-            } else if (item.is_pay) {
+            } else if (item['status'] == "ĐÃ THANH TOÁN") {
                 return (
                     <CustomButton title={"Xem bill"} color={"#3366ff"} fsize={17} onPress={() => handleViewBill(item.id)} />
                 );
-            } else if (!item.is_pay && item.is_confirm) {
+            } else if (item['status'] == "CHƯA THANH TOÁN") {
                 return (
                     <CustomButton title={"Thanh toán"} color={COLORS.green_primary} fsize={17} onPress={() => handlePayment(item.id)} />
                 );
-            } else if (item.is_confirm || !item.is_confirm) {
+            } else if (item['status'] == "ĐÃ XÁC NHẬN" || item['status'] == "CHƯA XÁC NHẬN") {
                 return (
                     <CustomButton title={"Hủy lịch hẹn"} color={"#b30000"} fsize={17} onPress={() => handleCancelAppointment(item.id)} />
                 );
             }
         };
 
+        const renderStatus = () => {
+            return (
+                <Text style={[styles.itemText, { color: item.status == "ĐÃ XÁC NHẬN" ? 'green' : 'red', alignSelf: 'flex-end' }]}>
+                    {Normalize.capitalizeFirstLetter(item.status)}
+                </Text>
+            )
+        }
+
         return (
             <View style={styles.itemContainer}>
-                <Text style={styles.itemText}>{departmentsDictionary[item.department]}</Text>
+                <Text style={styles.itemText}>Khoa: {(item.department)}</Text>
                 <Text style={styles.itemText}>Ngày: {formatDate(item.booking_date)}</Text>
                 <Text style={styles.itemText}>Giờ khám dự kiến: {(item.booking_time.slice(0, -3))}</Text>
-                <Text style={[styles.itemText, { color: item.is_confirm ? 'green' : 'red' }]}>
-                    {item.is_confirm ? 'Đã xác nhận' : 'Chưa xác nhận'}
-                </Text>
+                {renderStatus()}
                 {renderButton()}
             </View>
         );

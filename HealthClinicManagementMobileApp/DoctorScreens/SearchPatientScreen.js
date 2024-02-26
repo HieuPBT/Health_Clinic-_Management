@@ -3,11 +3,15 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Modal, S
 import CustomButton from '../components/CustomButton/CustomButton';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import MedicalHistoryScreen from './MedicalHistoryScreen';
+import CustomDatePicker from '../components/CustomDatePicker/CustomDatePicker';
+import CustomInput from '../components/CustomInput/CustomInput';
 
 const SearchPatientScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
 
   // Hàm xử lý tìm kiếm
   const handleSearch = () => {
@@ -26,12 +30,14 @@ const SearchPatientScreen = () => {
 
   return (
     <View style={styles.container}>
-      <TextInput
+      <CustomInput
         style={styles.input}
-        placeholder="Nhập thông tin bệnh nhân"
+        placeholder="Nhập mã bệnh nhân"
         value={searchQuery}
         onChangeText={text => setSearchQuery(text)}
       />
+      <CustomDatePicker onChangeDate={(date)=>{setStartDate(date)}} placeholder='Nhập ngày '/>
+      <CustomDatePicker onChangeDate={(date)=>{setStartDate(date)}}/>
       <CustomButton title="Tìm kiếm" onPress={handleSearch}/>
       <FlatList
         data={searchResults}
@@ -67,11 +73,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   input: {
-    height: 40,
     borderColor: '#ccc',
     borderWidth: 1,
     paddingHorizontal: 10,
     marginBottom: 10,
+    padding: 10,
+    borderRadius: 5,
   },
   searchButton: {
     backgroundColor: 'blue',

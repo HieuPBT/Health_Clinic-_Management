@@ -1,10 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import CustomInput from '../../components/CustomInput/CustomInput';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import Context from '../../Context';
-import axios from 'axios';
 import API, { endpoints } from '../../configs/API';
 import showSuccessToast from '../../utils/ShowSuccessToast';
 import showFailedToast from '../../utils/ShowFailedToast';
@@ -26,35 +24,38 @@ const PrescriptionScreen = ({ route, navigation }) => {
     const [medicineData, setMedicineData] = useState([]);
     const [isPrescriptionSuccess, setPrescriptionSuccess] = useState(false);
 
-    const { patientID, appointment } = route.params;
+    const { patientID, appointment, onSuccess } = route.params;
 
     // Function to add medicine to the prescription
     const addMedicine = (medicine) => {
         if (!medicinesToRender.some(item => item.medicine === medicine.name)) {
-            setMedicinesToPost([...medicinesToPost, { medicine: medicine.id, quantity: quantity }]);
-            setMedicinesToRender([...medicinesToRender, { medicine: medicine.name, quantity: quantity, unit: medicine.unit }])
+            setMedicinesToPost([...medicinesToPost, { medicine: medicine.id, quantity: quantity, note: instructions }]);
+            setMedicinesToRender([...medicinesToRender, { medicine: medicine.name, quantity: quantity, unit: medicine.unit, note: instructions }])
             // Clear input fields after adding medicine
         }
         setQuantity(null);
         setInstructions('');
     };
 
-    useEffect(() => {
-        const searchMedicine = async () => {
-            try{
-                const res = await API.get(endpoints['medicine'] + '?name=' + searchQuery, {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                });
-                setMedicineData(res.data.results);
-            } catch(err){
-                console.log(err);
-            }
+    const searchMedicine = async (text) => {
+        try {
+            const res = await API.get(endpoints['medicine'] + '?name=' + text, {
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            });
+            setMedicineData(res.data.results);
+        } catch (err) {
+            console.log(err);
         }
-        if (searchQuery != '')
-            searchMedicine();
-    }, [searchQuery])
+    };
+
+    const handleSearchQueryChange = (text) => {
+        setSearchQuery(text);
+        if (text !== '') {
+            searchMedicine(text);
+        }
+    };
 
     const renderMedicineItem = ({ item }) => (
         <TouchableOpacity style={styles.medicineItem} onPress={() => { setMedicinesInfoInputVisible(true); setSelectedMedicine(item) }} key={item.id}>
@@ -85,25 +86,17 @@ const PrescriptionScreen = ({ route, navigation }) => {
                 }
             })
 
-            if (res.status == 201) {
+            if (res.status === 201) {
                 showSuccessToast(`Kê toa thành công! Lịch hẹn ${appointment}`);
-                setPrescriptionSuccess(true);
+                navigation.navigate('Kê toa')
+                onSuccess();
             }
         } catch (err) {
-            // if(err.response.status == 404){
-
-            // }
             console.log(err);
             showFailedToast('Kê toa thất bại');
-            setPrescriptionSuccess(false);
+            setPrescriptionSuccess(false); // Cập nhật biến isPrescriptionSuccess khi kê toa thất bại
         }
-        // navigation.navigate('Ra toa')
     }
-    useEffect(() => {
-        if (isPrescriptionSuccess !== null) {
-            navigation.navigate('Kê toa', { 'success': isPrescriptionSuccess, 'prescribed_appointment_id': appointment });
-        }
-    }, [isPrescriptionSuccess]);
 
     return (
         <View style={styles.container}>
@@ -114,8 +107,7 @@ const PrescriptionScreen = ({ route, navigation }) => {
                     style={styles.searchInput}
                     placeholder="Tìm kiếm thuốc"
                     value={searchQuery}
-                    onChangeText={(text) => setSearchQuery(text)}
-
+                    onChangeText={(text) => handleSearchQueryChange(text)}
                 />
                 {medicineInfoInputVisible && <>
                     <Text>{selectedMedicine.name}</Text>

@@ -25,20 +25,31 @@ export const toastConfig = {
 };
 
 export const morningSlots = [
-    { id: 0, time: '08:30' },
-    { id: 1, time: '09:00' },
-    { id: 2, time: '09:30' },
-    { id: 3, time: '10:00' },
-    { id: 4, time: '10:30' },
+    { id: 0, time: '07:00' },
+    { id: 1, time: '07:30' },
+    { id: 2, time: '08:00' },
+    { id: 3, time: '08:30' },
+    { id: 4, time: '09:00' },
+    { id: 5, time: '09:30' },
+    { id: 6, time: '10:00' },
+    { id: 7, time: '10:30' },
+    { id: 8, time: '11:00' },
+    { id: 9, time: '11:30' }
 ];
 
 export const afternoonSlots = [
-    { id: 5, time: '14:00' },
-    { id: 6, time: '14:30' },
-    { id: 7, time: '15:00' },
-    { id: 8, time: '15:30' },
-    { id: 9, time: '16:00' },
+    { id: 10, time: '13:00' },
+    { id: 11, time: '13:30' },
+    { id: 12, time: '14:00' },
+    { id: 13, time: '14:30' },
+    { id: 14, time: '15:00' },
+    { id: 15, time: '15:30' },
+    { id: 16, time: '16:00' },
+    { id: 17, time: '16:30' },
+    { id: 18, time: '17:00' },
+    { id: 19, time: '17:30' }
 ];
+
 
 export const slots = [
     ...morningSlots,
@@ -46,16 +57,11 @@ export const slots = [
 ]
 
 export const departments = [
-    { id: 1, maKhoa: 'OTORHINOLARYNGOLOGY', name: 'TAI MŨI HỌNG', nameDisplay: 'Tai mũi họng' },
-    { id: 2, maKhoa: 'OBSTETRICS_GYNECOLOGY', name: 'PHỤ SẢN', nameDisplay: 'Phụ sản' },
-    { id: 3, maKhoa: 'DERMATOLOGY', name: 'DA LIỄU', nameDisplay: 'Da liễu' },
-    { id: 4, maKhoa: 'PLASTIC_SURGERY', name: 'THẨM MỸ', nameDisplay: 'Thẩm mỹ' },
-    { id: 5, maKhoa: 'ORTHOPEDICS', name: 'XƯƠNG KHỚP', nameDisplay: 'Xương khớp' },
-    { id: 6, maKhoa: 'OPHTHALMOLOGY', name: 'MẮT', nameDisplay: 'Mắt' },
-    { id: 7, maKhoa: 'DENTISTRY', name: 'RĂNG HÀM MẶT', nameDisplay: 'Răng hàm mặt' },
-    { id: 8, maKhoa: 'PSYCHIATRY', name: 'TÂM THẦN', nameDisplay: 'Tâm thần' },
-    { id: 9, maKhoa: 'TRADITIONAL_MEDICINE', name: 'Y HỌC CỔ TRUYỀN', nameDisplay: 'Y học cổ truyền' },
-    { id: 10, maKhoa: 'ENDOCRINOLOGY', name: 'NGOẠI TIẾT', nameDisplay: 'Ngoại tiết' },
+    { id: 0, maKhoa: 'OTORHINOLARYNGOLOGY', name: 'TAI MŨI HỌNG', nameDisplay: 'Tai mũi họng' },
+    { id: 1, maKhoa: 'DERMATOLOGY', name: 'DA LIỄU', nameDisplay: 'Da liễu' },
+    { id: 2, maKhoa: 'PLASTIC_SURGERY', name: 'THẨM MỸ', nameDisplay: 'Thẩm mỹ' },
+    { id: 3, maKhoa: 'OPHTHALMOLOGY', name: 'MẮT', nameDisplay: 'Mắt' },
+    { id: 4, maKhoa: 'DENTISTRY', name: 'RĂNG HÀM MẶT', nameDisplay: 'Răng hàm mặt' },
 ];
 
 

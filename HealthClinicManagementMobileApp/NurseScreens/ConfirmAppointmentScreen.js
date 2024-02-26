@@ -9,6 +9,8 @@ import { morningSlots, afternoonSlots } from '../configs/configs';
 import formatDate from '../utils/FormatDateFromYMD';
 import showSuccessToast from '../utils/ShowSuccessToast';
 import showFailedToast from '../utils/ShowFailedToast';
+import cutLast3Chars from '../utils/cutLast3Chars';
+import Normalize from '../utils/Normalize';
 
 const slots = [...morningSlots, ...afternoonSlots];
 
@@ -21,38 +23,30 @@ const ConfirmAppointmentScreen = () => {
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
 
-    const handleCancelAppointment = (id) => {
-        Alert.alert(
-            'Xác nhận hủy lịch hẹn',
-            'Bạn có chắc chắn muốn hủy lịch hẹn này?',
-            [
-                { text: 'Hủy', style: 'cancel' },
-                { text: 'Xác nhận', onPress: () => cancelAppointment(id) },
-            ],
-            { cancelable: false }
-        );
-    };
-
     const confirmAppointment = async (id) => {
         try {
-            const res = await API.patch(endpoints['appointment'](id),
-            {
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken
+            const res = await API.patch(
+                endpoints['confirm_appointment'](id),
+                null, // Thân yêu cầu trống vì không có dữ liệu được gửi cùng yêu cầu PATCH
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
                 }
-            })
+            );
 
-            if(res.status === 200){
+            if (res.status === 200) {
                 showSuccessToast(`Xác nhận thành công lịch hẹn ${id}!`);
                 setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
             }
-        } catch (err){
+        } catch (err) {
             console.log(err);
-            if(res.status === 500){
+            if (err.response.status === 500) {
                 showFailedToast('Xác nhận thất bại!');
             }
         }
     };
+
 
 
     const toggleModal = () => {
@@ -60,30 +54,33 @@ const ConfirmAppointmentScreen = () => {
     }
 
     const loadAppointments = async () => {
-        setLoading(true);
-        try {
-
-            const response = await API.get(`${endpoints['appointments']}?page=${page}`, {
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken
+        if (page !== null) {
+            setLoading(true);
+            try {
+                const response = await API.get(`${endpoints['appointments']}?page=${page}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                });
+                setAppointments([...appointments, ...response.data.results]);
+                console.log(appointments)
+                setPage(page + 1);
+            } catch (error) {
+                console.log('Error fetching:', error);
+                if (error.response.status === 404) {
+                    setPage(null);
                 }
-            });
-            console.log(response.data.results)
-            setAppointments([...appointments, ...response.data.results]);
-            setPage(page + 1);
-        } catch (error) {
-            console.log('Error fetching:', error);
-            if (error.response.status === 404) {
-                setPage(null);
+            } finally {
+                setLoading(false);
             }
-        } finally {
-            setLoading(false);
         }
     };
+
 
     useEffect(() => {
         setAppointments([]);
         loadAppointments();
+        setPage(1);
     }, [accessToken]);
 
     // Hàm để hiển thị activity indicator khi đang tải dữ liệu
@@ -93,7 +90,7 @@ const ConfirmAppointmentScreen = () => {
 
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
-            <Modal
+            {/* <Modal
                 visible={modalVisible}
                 onRequestClose={toggleModal}
             >
@@ -103,19 +100,22 @@ const ConfirmAppointmentScreen = () => {
                         <CustomButton title={"Thoát"} onPress={toggleModal} style={{}} />
                     </View>
                 </View>
-            </Modal>
+            </Modal> */}
             <View style={styles.row}>
-                <Text style={styles.itemText}>Bệnh nhân: </Text>
-                <TouchableOpacity onPress={() => { toggleModal() }}>
-                    <Text style={styles.viewProfileBtn}>
-                        {item.patientID}
-                    </Text>
-                </TouchableOpacity>
-                <Text style={styles.itemText}> - {departmentsDictionary[item.department]}</Text>
+                <Text style={styles.itemText}>Bệnh nhân: {item.patient.id}</Text>
+                <Text style={styles.itemText}> {item.patient.full_name} </Text>
             </View>
+            <Text style={styles.itemText}>Email: {item.patient.email}</Text>
+
             <View style={styles.row}>
                 <Text style={styles.itemText}>Ngày: {formatDate(item.booking_date)}</Text>
-                <Text style={styles.itemText}> - Giờ: {slots[item.booking_time].time}</Text>
+                <Text style={styles.itemText}>Giờ: {cutLast3Chars(item.booking_time)}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.itemText}>Khoa: {(item.department)}</Text>
+                <Text style={[styles.itemText, { color: 'red', alignSelf: 'flex-end' }]}>Chờ xác nhận</Text>
+            </View>
+            <View style={[styles.row, { justifyContent: 'flex-end' }]}>
             </View>
             <CustomButton title="Xác nhận" onPress={() => confirmAppointment(item.id)} />
         </View>
@@ -123,17 +123,22 @@ const ConfirmAppointmentScreen = () => {
 
     return (
         <View style={styles.container}>
-            {appointments != []?<FlatList
-                data={appointments}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={{ paddingVertical: 20 }}
-                onEndReached={() => { if (page != null) loadAppointments() }}
-                onEndReachedThreshold={0.1}
-                ListFooterComponent={renderFooter}
-            />:<ActivityIndicator/>}
+            {appointments != [] ? (
+                <FlatList
+                    data={appointments}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id.toString()}
+                    contentContainerStyle={{ paddingVertical: 20 }}
+                    onEndReached={() => { if (page != null) loadAppointments(); }}
+                    onEndReachedThreshold={0.1}
+                    ListFooterComponent={renderFooter}
+                />
+            ) : (
+                <ActivityIndicator />
+            )}
         </View>
     );
+
 };
 
 const styles = StyleSheet.create({
@@ -161,6 +166,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
     }
 });
 

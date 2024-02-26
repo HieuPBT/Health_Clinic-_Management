@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 
 import AppointmentContext from './Context';
 import DepartmentSelectionScreen from './Steps/DepartmentSelectionScreen';
@@ -14,7 +14,7 @@ import formatDate from '../../utils/DMYtoYMD';
 import showFailedToast from '../../utils/ShowFailedToast';
 
 
-const AppointmentScreen = ({ navigation }) => {
+const AppointmentScreen = ({ navigation, route }) => {
   const { accessToken } = useContext(Context);
   const [department, setDepartment] = useState('');
   const [date, setDate] = useState('');
@@ -22,6 +22,7 @@ const AppointmentScreen = ({ navigation }) => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [step, setStep] = useState(1);
+
 
   const handleAppointmentConfirm = async () => {
     try {
@@ -66,7 +67,7 @@ const AppointmentScreen = ({ navigation }) => {
         );
       case 3:
         return (
-          <AppointmentContext.Provider value={{ setStep, setShift }}>
+          <AppointmentContext.Provider value={{ setStep, setShift, date, department }}>
             <AppointmentTimePickerScreen isEditing={isEditing} />
           </AppointmentContext.Provider>
         );

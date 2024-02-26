@@ -1,36 +1,66 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
 import { COLORS } from '../configs/configs';
+import Context from '../Context';
+import API, { endpoints } from '../configs/API';
+import { ActivityIndicator } from 'react-native';
 
 const InvoiceScreen = ({navigation}) => {
-    const [appointments, setAppointments] = useState([
-        { id: 1, department: 'Nội khoa', date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 2, department: 'Răng hàm mặt', date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-        { id: 3, department: 'Nội khoa', date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 4, department: 'Răng hàm mặt', date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-        { id: 5, department: 'Nội khoa', date: '15/02/2024', time: '8h30 - 10h', patientID: 'BN01' },
-        { id: 6, department: 'Răng hàm mặt', date: '17/02/2024', time: '10h - 11h30', patientID: 'BN01' },
-    ]);
+    const {accessToken} = useContext(Context);
+    const [prescriptions, setPrescriptions] = useState([]);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+
+    const loadPrescription = async () => {
+        if (page !== null) {
+            setLoading(true);
+            try {
+                const response = await API.get(`${endpoints['my_appointment']}?page=${page}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                });
+                setPrescriptions([...prescriptions, ...response.data.results]);
+                console.log(prescriptions)
+                setPage(page + 1);
+            } catch (error) {
+                console.log('Error fetching:', error);
+                if (error.response.status === 404) {
+                    setPage(null);
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+
+    useEffect(() => {
+        setPrescriptions([]);
+        loadPrescription();
+        setPage(1);
+    }, [accessToken]);
+
+    // Hàm để hiển thị activity indicator khi đang tải dữ liệu
+    const renderFooter = () => {
+        return loading ? <ActivityIndicator size="large" color="#0000ff" /> : null;
+    };
 
     const invoice = (id) => {
-        setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
+        setPrescriptions(prevPrescription => prevPrescription.filter(prescription => prescription.id !== id));
     };
 
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
             <View style={styles.row}>
-                <Text style={styles.itemText}>Bệnh nhân: </Text>
-                <TouchableOpacity onPress={() => { }}>
-                    <Text style={styles.viewProfileBtn}>
-                        {item.patientID}
-                    </Text>
-                </TouchableOpacity>
-                <Text style={styles.itemText}> - {item.department}</Text>
+                <Text style={styles.itemText}>Cuộc hẹn: {item.appointment}</Text>
             </View>
             <View style={styles.row}>
-                <Text style={styles.itemText}>Ngày: {item.date}</Text>
-                <Text style={styles.itemText}> - Giờ: {item.time}</Text>
+                <Text style={styles.itemText}>Triệu chứng: {item.description}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.itemText}>Kết luận: {item.conclusion}</Text>
             </View>
             <CustomButton title="Xuất hóa đơn" onPress={() => navigation.navigate('Thanh toán')} />
         </View>
@@ -39,10 +69,13 @@ const InvoiceScreen = ({navigation}) => {
     return (
         <View style={styles.container}>
             <FlatList
-                data={appointments}
+                data={prescriptions}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={{ paddingVertical: 20 }}
+                onEndReached={() => { if (page != null) loadPrescription(); }}
+                onEndReachedThreshold={0.1}
+                ListFooterComponent={renderFooter}
             />
         </View>
     );

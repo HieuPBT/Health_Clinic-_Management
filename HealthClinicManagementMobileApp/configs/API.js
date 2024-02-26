@@ -16,12 +16,13 @@ export const endpoints = {
     'cancel_appointment': id => `/api/appointment/${id}/cancel/`,
     'appointment_count': '/api/appointment_count/',
     'my_appointment': '/api/appointment/patient_appointment/',
+    'available_times': (date, department) => `/api/appointment_available_time/?date=${date}&department=${department}`,
 
     'prescriptions': '/api/prescription/',
     'invoice': id => `/api/prescription/${id}/invoice/`,
-    'medical_history': patient_id => `api/prescription/patient_prescription/?patient=${patient_id}`,
-    'medical_history_date_filter': (patient_id, start_date, end_date) => `api/prescription/patient_prescription/?patient=${patient_id}&start_date=${start_date}&end_date=${end_date}`,
-    'today_medical_history': patient_id => `api/prescription/patient_prescription/?patient=${patient_id}`
+    'medical_history': patient_id => `/api/prescription/patient_prescription/?patient=${patient_id}`,
+    'medical_history_date_filter': (patient_id, start_date, end_date) => `/api/prescription/patient_prescription/?patient=${patient_id}&start_date=${start_date}&end_date=${end_date}`,
+    'today_medical_history': patient_id => `/api/prescription/patient_prescription/?patient=${patient_id}`
 }
 
 export default axios.create(

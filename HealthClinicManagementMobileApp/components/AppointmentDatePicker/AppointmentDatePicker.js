@@ -43,7 +43,11 @@ const AppointmentDatePicker = ({ setDate, btnTitle = "Xác nhận", handleConfir
     useEffect(() => {
         loadCountFullDate = async () => {
             try {
-                const res = await API.get(endpoints['appointment_count']);
+                const res = await API.get(endpoints['appointment_count'], {
+                    headers: {
+                        Authorization: 'Bearer ' + accessToken,
+                    }
+                });
                 setFullDate(convertToFullDateArray(res.data));
             } catch (e) {
                 console.log(e);

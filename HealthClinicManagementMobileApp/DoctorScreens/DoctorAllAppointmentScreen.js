@@ -30,12 +30,10 @@ const DoctorAllAppointmentScreen = ({ navigation, route }) => {
                     'Authorization': 'Bearer ' + accessToken
                 }
             });
-            console.log(response.data.results)
             setAppointments([...appointments, ...response.data.results]);
             setPage(page + 1);
         } catch (error) {
-            console.log(page)
-            console.log('Error fetching:', error);
+            // console.log('Error fetching:', error);
             if (error.response.status === 404) {
                 setPage(null);
             }
@@ -57,16 +55,10 @@ const DoctorAllAppointmentScreen = ({ navigation, route }) => {
         return loading ? <ActivityIndicator size="large" color="#0000ff" /> : null;
     };
 
-    useEffect(() => {
-        const prescribing = (id) => {
-            setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
-        };
-        if (route.params) {
-            var { prescribed_appointment_id, success } = route.params;
-            // if (success)
-                prescribing(prescribed_appointment_id);
-        }
-    }, [route.params])
+    const prescribing = (id) => {
+        setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
+    };
+
 
 
     const toggleModal = () => {
@@ -74,23 +66,28 @@ const DoctorAllAppointmentScreen = ({ navigation, route }) => {
     }
 
 
-    const renderItem = ({ item }) => (
-        <View style={styles.itemContainer}>
-            <View style={styles.row}>
-                <Text style={styles.itemText}>Bệnh nhân: </Text>
-                <TouchableOpacity onPress={() => { navigation.navigate('ViewMedicalHistory', { "patientID": item.patient.id, userData: item.patient }) }}>
-                    <Text style={styles.viewProfileBtn}>
-                        {item.patient.full_name}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-            <View style={styles.row}>
-                <Text style={styles.itemText}>Ngày: {item.booking_date}</Text>
-                <Text style={styles.itemText}> - Giờ: {slots[item.booking_time].time}</Text>
-            </View>
-            <CustomButton title="Kê toa" onPress={() => navigation.navigate('Prescription', { "patientID": item.patient.id, 'appointment': item.id })} />
-        </View>
-    );
+    const renderItem = ({ item }) => {
+        try {
+            return (
+                <View style={styles.itemContainer}>
+                    <View style={styles.row}>
+                        <Text style={styles.itemText}>Bệnh nhân: </Text>
+                        <TouchableOpacity onPress={() => { navigation.navigate('ViewMedicalHistory', { "patientID": item.patient.id, "userData": item.patient }) }}>
+                            <Text style={styles.viewProfileBtn}>
+                                {item.patient.full_name}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={styles.itemText}>Ngày: {item.booking_date}</Text>
+                        <Text style={styles.itemText}> - Giờ: {item.booking_time.slice(0, -3)}</Text>
+                    </View>
+                    <CustomButton title="Kê toa" onPress={() => navigation.navigate('Prescription', { "patientID": item.patient.id, 'appointment': item.id, onSuccess: () => { prescribing(item.id) } })} />
+                </View>)
+        } catch (err) {
+            console.log(err);
+        }
+    }
 
     return (
         <View style={styles.container}>
