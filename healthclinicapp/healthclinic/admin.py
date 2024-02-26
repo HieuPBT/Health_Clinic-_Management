@@ -1,19 +1,58 @@
+import django.apps.registry
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin
+from django.contrib.auth.models import Group
+from django.template.response import TemplateResponse
+from django.urls import path
 from django.utils.safestring import mark_safe
-from .forms import CustomUserChangeForm, CustomUserCreationForm, AppointmentForm
+from .forms import *
 from .models import *
+from .dao import *
 # Register your models here.
 
 
+class HealthClinicAppAdminSite(admin.AdminSite):
+    site_header = 'Hệ thống Quản Lý Phòng Mạch Tư Lộc Hiếu'
+
+    def get_urls(self):
+        return  [
+            path('stats/', self.stats_view)
+        ] + super().get_urls()
+
+    def stats_view(self, request):
+        # Thống kê số lượng bệnh nhân đến khám theo tháng trong năm hiện tại
+        patients_by_month = count_patient_appointments_by_period('month')
+
+        patient_by_quarter = count_patient_appointments_by_period('quarter')
+
+        # Thống kê số lượng bệnh nhân đến khám theo năm
+        patient_by_year = count_patient_appointments_by_period('year')
+
+        revenue_by_month = calculate_revenue_by_period('month')
+
+        revenue_by_quarter = calculate_revenue_by_period('quarter')
+
+        revenue_by_year = calculate_revenue_by_period('year')
+
+        context = {
+            'patients_by_month': patients_by_month,
+            'patient_by_quarter': patient_by_quarter,
+            'patient_by_year': patient_by_year,
+            'revenue_by_month': revenue_by_month,
+            'revenue_by_quarter': revenue_by_quarter,
+            'revenue_by_year': revenue_by_year,
+        }
+
+        return TemplateResponse(request, 'admin/stats.html', context)
+
+
+admin_site = HealthClinicAppAdminSite(name='myadmin')
+
+
 class UserAdmin(BaseUserAdmin):
-    # The forms to add and change user instances
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    # The fields to be used in displaying the User model.
-    # These override the definitions on the base UserAdmin
-    # that reference specific fields on auth.User.
     list_display = ('id', 'email', 'role', 'is_active', 'is_staff', 'is_superuser', 'last_login', 'date_joined')
     list_filter = ('role',)
     fieldsets = (
@@ -21,8 +60,6 @@ class UserAdmin(BaseUserAdmin):
         ('Permission', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
         ('Personal info', {'fields': ('full_name', 'gender', 'date_of_birth', 'phone_number', 'address', 'avatar')}),
     )
-    # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
-    # overrides get_fieldsets to use this attribute when creating a user.
     add_fieldsets = (
         (None,
          {'fields': ('email', 'password1', 'password2', 'role')}),
@@ -40,18 +77,6 @@ class EmployeeAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'department']
 
 
-class PatientAdmin(admin.ModelAdmin):
-    list_display = ['id', 'patient__full_name']
-    readonly_fields = ['avatar']
-
-    def avatar(self, obj):
-        if obj:
-            return mark_safe(
-                '<img src="/static/{url}" width="120" />'\
-                    .format(url=obj.image.name)
-            )
-
-
 class ScheduleAdmin(admin.ModelAdmin):
     list_display = ['id', 'employee', 'shift', 'start_date', 'end_date']
     ordering = ['id']
@@ -63,12 +88,6 @@ class ShiftAdmin(admin.ModelAdmin):
     list_display = ['id', 'start_time', 'end_time']
     search_fields = ['start_time', 'end_time']
     list_filter = ['start_time', 'end_time']
-    ordering = ['id']
-
-
-class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'patient', 'department', 'booking_date', 'booking_time',  'status', 'confirmed_by']
-    search_fields = ['patient']
     ordering = ['id']
 
 
@@ -86,20 +105,10 @@ class MedicineAdmin(admin.ModelAdmin):
     ordering = ['id']
 
 
-class PrescriptionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'appointment', 'doctor']
-    search_fields = ['id']
-    ordering = ['id']
-
-
-admin.site.register(User, UserAdmin)
-admin.site.register(Patient)
-admin.site.register(Employee, EmployeeAdmin)
-admin.site.register(Shift, ShiftAdmin)
-admin.site.register(Schedule, ScheduleAdmin)
-admin.site.register(Appointment, AppointmentAdmin)
-admin.site.register(Medicine, MedicineAdmin)
-admin.site.register(MedicineCategory, MedicineCategoryAdmin)
-admin.site.register(Prescription, PrescriptionAdmin)
-admin.site.register(PrescriptionMedicine)
-admin.site.register(Invoice)
+admin_site.register(User, UserAdmin)
+admin_site.register(Employee, EmployeeAdmin)
+admin_site.register(Shift, ShiftAdmin)
+admin_site.register(Schedule, ScheduleAdmin)
+admin_site.register(Medicine, MedicineAdmin)
+admin_site.register(MedicineCategory, MedicineCategoryAdmin)
+admin_site.register(Group, GroupAdmin)

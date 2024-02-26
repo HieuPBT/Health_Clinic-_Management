@@ -10,22 +10,17 @@ class Role(models.TextChoices):
 
 
 class Gender(models.TextChoices):
-    MALE = "MALE", _('Male')
-    FEMALE = "FEMALE", _('Female')
-    OTHER = "OTHER", _('Other')
+    MALE = "MALE", _('Nam')
+    FEMALE = "FEMALE", _('Nữ')
+    OTHER = "OTHER", _('Khác')
 
 
 class Department(models.TextChoices):
-    OTORHINOLARYNGOLOGY = "TAI MŨI HỌNG"
-    OBSTETRICS_GYNECOLOGY = "PHỤ SẢN"
-    DERMATOLOGY = "DA LIỄU"
-    PLASTIC_SURGERY = "THẨM MỸ"
-    ORTHOPEDICS = "XƯƠNG KHỚP"
-    OPHTHALMOLOGY = "MẮT"
-    DENTISTRY = "RĂNG HÀM MẶT"
-    PSYCHIATRY = "TÂM THẦN"
-    TRADITIONAL_MEDICINE = "Y HỌC CỔ TRUYỀN"
-    ENDOCRINOLOGY = "NGOẠI TIẾT"
+    OTORHINOLARYNGOLOGY = "TAI MŨI HỌNG", _('TAI MŨI HỌNG')
+    DERMATOLOGY = "DA LIỄU", _('DA LIỄU')
+    PLASTIC_SURGERY = "THẨM MỸ", _('THẨM MỸ')
+    OPHTHALMOLOGY = "MẮT", _('MẮT')
+    DENTISTRY = "RĂNG HÀM MẶT", _('RĂNG HÀM MẶT')
 
 
 class Status(models.TextChoices):

@@ -98,7 +98,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'healthclinicdb',
         'USER': 'root',
-        'PASSWORD': 'Admin123@',
+        'PASSWORD': 'Admin@123',
         'HOST': '' #mặc định local host
     }
 }
