@@ -161,10 +161,6 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
             return serializers.AppointmentListSerializer
         if self.action == 'list' and self.request.user.role == 'NURSE':
             return serializers.NurseAppointmentSerializer
-        # if self.request.method == 'PATCH' and self.request.user.role == 'NURSE':
-        #     return serializers.AppointmentConfirmSerializer
-        # if self.request.method == 'PATCH' and self.request.user.role == 'PATIENT':
-        #     return serializers.AppointmentCancelSerializer
         return serializers.AppointmentCreateSerializer
 
     def get_queryset(self):
@@ -187,7 +183,6 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
                 # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
                 shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
 
-                # Tạo một danh sách các điều kiện OR để so sánh thời gian đặt cuộc hẹn với khoảng thời gian của từng ca làm việc
                 time_conditions = Q()
                 for start_time, end_time in shift_times:
                     time_conditions |= Q(booking_time__range=[start_time, end_time])
@@ -410,10 +405,8 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
         end_date = self.request.query_params.get("end_date")
         if q:
             p = p.filter(appointment__patient=q)
-            #return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)
         if q and start_date and end_date:
             p = p.filter(appointment__patient=q).filter(created_date__gte=start_date).filter(created_date__lte=end_date)
-            #return Response(serializers.PrescriptionSerializer(p, many=True, context={'request': request}).data)
         paginator = paginators.PrescriptionPagination()
         result_page = paginator.paginate_queryset(p, request)
         return paginator.get_paginated_response(
