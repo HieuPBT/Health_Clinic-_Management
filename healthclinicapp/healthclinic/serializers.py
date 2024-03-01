@@ -165,6 +165,15 @@ class PrescriptionCreateSerializer(serializers.ModelSerializer):
         return prescription
 
 
+class TodayPrescriptionSerializer(serializers.ModelSerializer):
+    medicine_list = PrescriptionMedicineCreateSerializer(many=True, source='prescriptionmedicine_set')
+    appointment = NurseAppointmentSerializer()
+
+    class Meta:
+        model = models.Prescription
+        fields = ['id', 'appointment', 'description', 'conclusion', 'medicine_list']
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
 
     class Meta:

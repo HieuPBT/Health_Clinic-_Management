@@ -1,7 +1,8 @@
+import json
 import string
 from datetime import datetime, timedelta, timezone, time
 import random
-
+from time import time
 import pytz
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
@@ -15,7 +16,7 @@ from django.utils.encoding import force_str
 
 from functools import partial
 
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from oauth2_provider.models import RefreshToken
 from rest_framework import viewsets, generics, status, views, parsers, permissions
@@ -27,6 +28,14 @@ from healthclinic import serializers, paginators, models
 from healthclinic.token import account_activation_token
 from healthclinicapp import settings
 
+# momo
+import json
+import urllib.request
+import urllib
+import uuid
+import requests
+import hmac
+import hashlib
 
 # Create your views here.
 
@@ -59,7 +68,7 @@ class AvailableAppointmentListAPIView(APIView):
         ).exclude(status='ĐÃ HUỶ')  # Lọc các lịch hẹn đã được đặt và không bị hủy
 
         # Tạo một danh sách của tất cả các thời gian có thể trong khoảng thời gian đã xác định
-        all_appointment_times = [datetime.combine(current_date, time) for time in Appointment.TIME_CHOICES]
+        all_appointment_times = [datetime.combine(current_date, time) for time in models.Appointment.TIME_CHOICES]
 
         # Tạo một danh sách của các thời gian còn khả dụng bằng cách loại bỏ các thời gian đã được đặt
         available_times = [time for time in all_appointment_times if time not in booked_appointments.values_list('booking_time', flat=True)]
@@ -371,7 +380,7 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     def get_permissions(self):
         if self.action == 'get_patient_prescription':
-            return [perms.IsDocotor()]
+            return [perms.IsDoctor()]
         if self.action in ['get_today_prescription', 'create_invoice']:
             return [perms.IsNurse()]
         return [permissions.DjangoModelPermissions()]
@@ -388,13 +397,13 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
         # Lọc các đơn thuốc mà chưa có hóa đơn tương ứng
         prescriptions_without_invoice = prescriptions_today.exclude(invoice__isnull=False)
 
-        # Sử dụng paginator để phân trang nếu cần
+        # Sử dụng paginator để phân trang
         paginator = paginators.PrescriptionPagination()
         result_page = paginator.paginate_queryset(prescriptions_without_invoice, request)
 
         # Trả về phản hồi cho các đơn thuốc không có hóa đơn tương ứng
         return paginator.get_paginated_response(
-            serializers.PrescriptionSerializer(result_page, many=True, context={'request': request}).data)
+            serializers.TodayPrescriptionSerializer(result_page, many=True, context={'request': request}).data)
 
     # patient history
     @action(detail=False, methods=['get'], url_path='patient_prescription', url_name='patient_prescription')
@@ -424,3 +433,167 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
         appointment.save()
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class MomoViewSet(viewsets.ViewSet):
+    permission_classes = [perms.IsNurse]
+
+    @action(detail=False, methods=['post'], url_path='create', url_name='momo_create')
+    @csrf_exempt
+    def create_momo_payment(self, request): # tạo đường link thanh toán
+        endpoint = "https://test-payment.momo.vn/v2/gateway/api/create"
+        partnerCode = "MOMO"
+        accessKey = "F8BBA842ECF85"
+        secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+        requestId = str(uuid.uuid4())
+        amount = self.request.data.get('total')
+        orderId = str(uuid.uuid4())
+        # orderId = total.get('appointment_id')+total.get('user_id')+total.get('booking_date')
+        orderInfo = "pay with MoMo"
+        requestType = "captureWallet"
+        extraData = ""
+        redirectUrl = ""
+        ipnUrl = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b"
+        rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType
+        h = hmac.new(bytes(secretKey, 'ascii'), bytes(rawSignature, 'ascii'), hashlib.sha256)
+        signature = h.hexdigest()
+        data = {
+            'partnerCode': partnerCode,
+            'partnerName': "Phòng Khám Tư Lộc Hiếu",
+            'requestId': requestId,
+            'amount': amount,
+            'orderId': orderId,
+            'orderInfo': orderInfo,
+            'redirectUrl': redirectUrl,
+            'ipnUrl': ipnUrl,
+            'lang': "vi",
+            'extraData': extraData,
+            'requestType': requestType,
+            'signature': signature
+        }
+
+        data = json.dumps(data)
+
+        clen = len(data)
+        response = requests.post(endpoint, data=data,
+                                 headers={'Content-Type': 'application/json', 'Content-Length': str(clen)})
+
+        if response.status_code == 200:
+            response_data = response.json()
+            return JsonResponse({**response_data})
+        else:
+            return JsonResponse({'error': 'Invalid request method'})
+
+    @csrf_exempt
+    @action(detail=False, methods=['post'], url_path='query', url_name='query_momo')
+    def query_momo_payment(self, request): # kiểm tra giao dịch đã thanh toán?
+        endpoint = "https://test-payment.momo.vn/v2/gateway/api/query"
+        secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+        accessKey = "F8BBA842ECF85"
+        request_data = self.request.data
+        partnerCode = request_data.get('partnerCode')
+        requestId = request_data.get('requestId')
+        orderId = request_data.get('orderId')
+        lang = request_data.get('lang')
+        # mã hóa HMAC SHA256
+        rawSignature = "accessKey=" + accessKey + "&orderId=" + orderId + "&partnerCode=" + partnerCode + "&requestId=" + requestId
+        h = hmac.new(bytes(secretKey, 'ascii'), bytes(rawSignature, 'ascii'), hashlib.sha256)
+        signature = h.hexdigest()
+
+        data = {
+            'partnerCode': partnerCode,
+            'requestId': requestId,
+            'orderId': orderId,
+            'lang': lang,
+            'signature': signature
+        }
+
+        response = requests.post(endpoint, json=data)
+
+        if response.status_code == 200:
+            response_data = response.json()
+            return JsonResponse({**response_data})
+        else:
+            return JsonResponse({'error': 'Invalid request method'})
+
+
+class ZaloViewSet(viewsets.ViewSet):
+    permission_classes = [perms.IsNurse]
+
+    @csrf_exempt
+    @action(detail=False, methods=['post'], url_path='create', url_name='create_zalo')
+    def create_zalo_payment(self, request):   # tạo đường link thanh toán
+        # zalo config
+        endpoint = "https://sandbox.zalopay.com.vn/v001/tpe/createorder"
+        appid = 553
+        key1 = "9phuAOYhan4urywHTh0ndEXiV3pKHr5Q"
+        embeddata = json.dumps({"merchantinfo": "embeddata123"})
+        item = json.dumps([{"itemid": "knb", "itemname": "Pham Ba Trung Hieu", "itemprice": 99999, "itemquantity": 1}])
+        appuser = "demo"
+        apptime = int(round(time() * 1000))  # thời gian hết hạn thanh toán
+        apptransid = "{:%y%m%d}_{}".format(datetime.today(), uuid.uuid4())
+
+        # Lấy dữ liệu từ request của client
+        amount = self.request.data.get('amount')
+
+        # Tạo chuỗi dữ liệu theo định dạng yêu cầu
+        raw_data = "{}|{}|{}|{}|{}|{}|{}".format(appid, apptransid, appuser, amount, apptime, embeddata, item)
+
+        # Tính toán MAC bằng cách sử dụng HMAC
+        h = hmac.new(key1.encode(), raw_data.encode(), hashlib.sha256)
+        mac = h.hexdigest()
+
+        # Dữ liệu gửi đi
+        data = {
+            "appid": appid,
+            "appuser": appuser,
+            "apptime": apptime,
+            "amount": amount,
+            "apptransid": apptransid,
+            "embeddata": embeddata,
+            "item": item,
+            "description": "Phòng Khám Tư Lộc Hiếu",
+            "bankcode": "zalopayapp",
+            "mac": mac
+        }
+
+        # Gửi yêu cầu tạo
+        response = requests.post(url=endpoint, data=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            return JsonResponse({**result, 'apptransid': apptransid})
+        else:
+            return JsonResponse({'error': 'Invalid request method'})
+
+    @csrf_exempt
+    @action(detail=False, methods=['post'], url_path='query', url_name='query_zalo')
+    def query_zalo_payment(self, request):  # kiểm tra trạng thái thanh toán?
+        # zalo config
+        endpoint = "https://sandbox.zalopay.com.vn/v001/tpe/getstatusbyapptransid"
+        appid = 553
+        key1 = "9phuAOYhan4urywHTh0ndEXiV3pKHr5Q"
+
+        request_data = self.request.data
+        apptransid = request_data.get('apptransid')
+
+        raw_data = "{}|{}|{}".format(appid, apptransid, key1)  # appid|apptransid|key1
+
+        h = hmac.new(key1.encode(), raw_data.encode(), hashlib.sha256)
+        mac = h.hexdigest()
+
+        # Dữ liệu gửi đi
+        data = {
+            "appid": appid,
+            "apptransid": apptransid,
+            "mac": mac
+        }
+
+        # gửi yêu cầu kiểm tra
+        response = requests.post(url=endpoint, data=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            return JsonResponse({**result})
+        else:
+            return JsonResponse({'error': 'Invalid request method'})

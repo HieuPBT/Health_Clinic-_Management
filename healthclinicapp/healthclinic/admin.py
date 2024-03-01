@@ -2,6 +2,7 @@ import django.apps.registry
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin
 from django.contrib.auth.models import Group
+from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils.safestring import mark_safe
@@ -20,30 +21,17 @@ class HealthClinicAppAdminSite(admin.AdminSite):
         ] + super().get_urls()
 
     def stats_view(self, request):
-        # Thống kê số lượng bệnh nhân đến khám theo tháng trong năm hiện tại
-        patients_by_month = count_patient_appointments_by_period('month')
-
-        patient_by_quarter = count_patient_appointments_by_period('quarter')
-
-        # Thống kê số lượng bệnh nhân đến khám theo năm
-        patient_by_year = count_patient_appointments_by_period('year')
-
-        revenue_by_month = calculate_revenue_by_period('month')
-
-        revenue_by_quarter = calculate_revenue_by_period('quarter')
-
-        revenue_by_year = calculate_revenue_by_period('year')
+        period = request.GET.get('period', 'month')
+        patient_stats = count_patient_appointments_by_period(period=period)
+        revenue_stats = calculate_revenue_by_period(period=period)
 
         context = {
-            'patients_by_month': patients_by_month,
-            'patient_by_quarter': patient_by_quarter,
-            'patient_by_year': patient_by_year,
-            'revenue_by_month': revenue_by_month,
-            'revenue_by_quarter': revenue_by_quarter,
-            'revenue_by_year': revenue_by_year,
+            'patient_stats': patient_stats,
+            'revenue_stats': revenue_stats,
+            'period': period
         }
 
-        return TemplateResponse(request, 'admin/stats.html', context)
+        return render(request, 'admin/stats.html', context)
 
 
 admin_site = HealthClinicAppAdminSite(name='myadmin')

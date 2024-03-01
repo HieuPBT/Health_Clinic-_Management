@@ -15,7 +15,7 @@ class IsNurse(permissions.BasePermission):
         return False
 
 
-class IsDocotor(permissions.BasePermission):
+class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
         # Kiểm tra xem người dùng đã xác thực chưa
         if request.user.is_authenticated:
