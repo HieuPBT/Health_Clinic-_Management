@@ -1,8 +1,6 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import Auth from '../components/auth/Auth';
 import HomeScreen from '../screens/HomeScreen';
-import AppointmentScreen from '../screens/AppointmentScreen/AppointmentScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DoctorAllAppointmentScreen from '../DoctorScreens/DoctorAllAppointmentScreen';
@@ -13,6 +11,7 @@ import PatientProfileDoctorViewScreen from '../DoctorScreens/PatientProfileDocto
 import ArticleList from '../components/ArticleList/ArticleList';
 import MedicalHistoryItem from '../components/MedicalHistoryItem/MedicalHistoryItem';
 import MedicalHistoryScreen from '../DoctorScreens/MedicalHistoryScreen';
+import UserProfileNavigator from './UserProfileNavigator';
 
 
 
@@ -21,7 +20,7 @@ const Tab = createBottomTabNavigator();
 const DoctorAppNavigator = () => {
   return (
     <Tab.Navigator >
-      <Tab.Screen name="Trang Chủ" component={HomeScreen} options={{
+      <Tab.Screen name="Trang chủ" component={HomeScreen} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="home" color={color} size={size} />
         ),
@@ -35,13 +34,7 @@ const DoctorAppNavigator = () => {
       }} />
       <Tab.Screen name="Tra bệnh án" component={SearchPatientScreen} options={{
         tabBarIcon: ({ color, size }) => (
-          <Icon name="documents" color={color} size={size} />
-        ),
-        tabBarButton: CustomTabButton
-      }} />
-      <Tab.Screen name="Tài Khoản" component={UserProfileScreen} options={{
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="person" color={color} size={size} />
+          <Icon name="search" color={color} size={size} />
         ),
         tabBarButton: CustomTabButton
       }} />
@@ -71,13 +64,20 @@ const DoctorAppNavigator = () => {
         tabBarItemStyle: {
           display: 'none'
         },
-        // title: 'Chi tiết lịch sử'
+        title: 'Lịch sử khám'
       }} />
 
       <Tab.Screen name="Tin tức" component={ArticleList} options={{
         tabBarItemStyle: {
           display: 'none'
         }
+      }} />
+      <Tab.Screen name="Tài khoản" component={UserProfileNavigator} options={{
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="person" color={color} size={size} />
+        ),
+        tabBarButton: CustomTabButton,
+        headerShown: false
       }} />
     </Tab.Navigator>
   );

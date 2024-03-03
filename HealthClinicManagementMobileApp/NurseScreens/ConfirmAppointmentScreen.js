@@ -1,38 +1,28 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
-import { COLORS, departmentsDictionary } from '../configs/configs';
-import UserProfileScreen from '../screens/UserProfileScreen';
-import API, { endpoints } from '../configs/API';
+import { COLORS } from '../configs/constants';
+import { authApi, endpoints } from '../configs/API';
 import Context from '../Context';
-import { morningSlots, afternoonSlots } from '../configs/configs';
 import formatDate from '../utils/FormatDateFromYMD';
 import showSuccessToast from '../utils/ShowSuccessToast';
 import showFailedToast from '../utils/ShowFailedToast';
 import cutLast3Chars from '../utils/cutLast3Chars';
-import Normalize from '../utils/Normalize';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-const slots = [...morningSlots, ...afternoonSlots];
 
-const ConfirmAppointmentScreen = () => {
+const ConfirmAppointmentScreen = ({ navigation }) => {
     const { accessToken } = useContext(Context);
-    console.log(accessToken)
 
     const [appointments, setAppointments] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
 
     const confirmAppointment = async (id) => {
         try {
-            const res = await API.patch(
+            const res = await authApi(accessToken).patch(
                 endpoints['confirm_appointment'](id),
-                null, // Thân yêu cầu trống vì không có dữ liệu được gửi cùng yêu cầu PATCH
-                {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                }
+                null
             );
 
             if (res.status === 200) {
@@ -47,32 +37,20 @@ const ConfirmAppointmentScreen = () => {
         }
     };
 
-
-
-    const toggleModal = () => {
-        setModalVisible(!modalVisible)
-    }
-
     const loadAppointments = async () => {
-        if (page !== null) {
-            setLoading(true);
-            try {
-                const response = await API.get(`${endpoints['appointments']}?page=${page}`, {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                });
-                setAppointments([...appointments, ...response.data.results]);
-                console.log(appointments)
+        setLoading(true);
+        try {
+            const response = await authApi(accessToken).get(`${endpoints['appointments']}?page=${page}`);
+            if (response.data.next == null) {
+                setPage(null);
+            } else {
                 setPage(page + 1);
-            } catch (error) {
-                console.log('Error fetching:', error);
-                if (error.response.status === 404) {
-                    setPage(null);
-                }
-            } finally {
-                setLoading(false);
             }
+            setAppointments([...appointments, ...response.data.results]);
+        } catch (error) {
+            console.log('Error fetching:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -83,24 +61,12 @@ const ConfirmAppointmentScreen = () => {
         setPage(1);
     }, [accessToken]);
 
-    // Hàm để hiển thị activity indicator khi đang tải dữ liệu
     const renderFooter = () => {
         return loading ? <ActivityIndicator size="large" color="#0000ff" /> : null;
     };
 
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
-            {/* <Modal
-                visible={modalVisible}
-                onRequestClose={toggleModal}
-            >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <View style={{ flex: 1, backgroundColor: 'white', padding: 10 }}>
-                        <UserProfileScreen preview={true} />
-                        <CustomButton title={"Thoát"} onPress={toggleModal} style={{}} />
-                    </View>
-                </View>
-            </Modal> */}
             <View style={styles.row}>
                 <Text style={styles.itemText}>Bệnh nhân: {item.patient.id}</Text>
                 <Text style={styles.itemText}> {item.patient.full_name} </Text>
@@ -120,22 +86,34 @@ const ConfirmAppointmentScreen = () => {
             <CustomButton title="Xác nhận" onPress={() => confirmAppointment(item.id)} />
         </View>
     );
+    const handleRefresh = () => {
+        setPage(1);
+        setAppointments([]);
+        loadAppointments();
+    }
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={handleRefresh}>
+                    <Text style={{ marginRight: 15 }}>
+                        <Icon name={'refresh'} size={28} />
+                    </Text>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
 
     return (
         <View style={styles.container}>
-            {appointments != [] ? (
-                <FlatList
-                    data={appointments}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={{ paddingVertical: 20 }}
-                    onEndReached={() => { if (page != null) loadAppointments(); }}
-                    onEndReachedThreshold={0.1}
-                    ListFooterComponent={renderFooter}
-                />
-            ) : (
-                <ActivityIndicator />
-            )}
+            <FlatList
+                data={appointments}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={{ paddingVertical: 20 }}
+                onEndReached={page != null ? loadAppointments : null}
+                onEndReachedThreshold={0.1}
+                ListFooterComponent={renderFooter}
+            />
         </View>
     );
 
@@ -145,6 +123,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: 20,
+        paddingVertical: 10
     },
     itemContainer: {
         marginBottom: 20,

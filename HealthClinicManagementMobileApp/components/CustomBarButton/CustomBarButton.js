@@ -1,5 +1,5 @@
 import { TouchableOpacity } from "react-native";
-import { COLORS } from "../../configs/configs";
+import { COLORS } from "../../configs/constants";
 
 const CustomTabButton = (props) => (
   <TouchableOpacity

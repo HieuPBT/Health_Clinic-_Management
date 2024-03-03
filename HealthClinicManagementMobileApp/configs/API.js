@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const host = 'https://hieupbt.pythonanywhere.com'
+
 export const endpoints = {
     'login': '/o/token/',
     'user': '/api/user/',
@@ -20,13 +22,26 @@ export const endpoints = {
 
     'prescriptions': '/api/prescription/',
     'invoice': id => `/api/prescription/${id}/invoice/`,
-    'medical_history': patient_id => `/api/prescription/patient_prescription/?patient=${patient_id}`,
-    'medical_history_date_filter': (patient_id, start_date, end_date) => `/api/prescription/patient_prescription/?patient=${patient_id}&start_date=${start_date}&end_date=${end_date}`,
-    'today_medical_history': patient_id => `/api/prescription/patient_prescription/?patient=${patient_id}`
+    'medical_history': email => `/api/prescription/patient_prescription/?email=${email}`,
+    'medical_history_date_filter': (email, start_date, end_date) => `/api/prescription/patient_prescription/?email=${email}&start_date=${start_date}&end_date=${end_date}`,
+    'today_prescription': `/api/prescription/today_prescription/`,
+
+    'create_momo': '/api/momo/create/',
+    'query_momo': '/api/momo/query/',
+
+    'create_zalopay': '/api/zalopay/create/',
+    'query_zalopay': '/api/zalopay/query/'
 }
+
+export const authApi = (accessToken) => axios.create({
+    baseURL: host,
+    headers: {
+        "Authorization": `Bearer ${accessToken}`
+    }
+})
 
 export default axios.create(
     {
-        baseURL: 'https://hieupbt.pythonanywhere.com',
+        baseURL: host,
     }
 )

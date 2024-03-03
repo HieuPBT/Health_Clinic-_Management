@@ -7,7 +7,7 @@ import AppointmentTimePickerScreen from './Steps/AppointmentTimePickerScreen';
 import AppointmentConfirmationScreen from './Steps/AppointmentConfirmationScreen';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import { View } from 'react-native';
-import API, { endpoints } from '../../configs/API';
+import API, { authApi, endpoints } from '../../configs/API';
 import Context from '../../Context';
 import showSuccessToast from '../../utils/ShowSuccessToast';
 import formatDate from '../../utils/DMYtoYMD';
@@ -26,15 +26,20 @@ const AppointmentScreen = ({ navigation, route }) => {
 
   const handleAppointmentConfirm = async () => {
     try {
-      const res = await API.post(endpoints['appointments'], {
+      const res = await authApi(accessToken).post(endpoints['appointments'], {
         "department": department.name,
         "booking_date": (date),
         "booking_time": shift.time
-      }, {
-        headers: {
-          'Authorization': 'Bearer ' + accessToken
-        }
       })
+      // const resa = await API.post(endpoints['appointments'], {
+      //   "department": department.name,
+      //   "booking_date": (date),
+      //   "booking_time": shift.time
+      // }, {
+      //   headers: {
+      //     'Authorization': 'Bearer ' + accessToken
+      //   }
+      // })
 
       if (res.status == 201) {
         showSuccessToast('Đặt lịch thành công!');

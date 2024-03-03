@@ -6,15 +6,18 @@ import Styles1 from '../Styles';
 import AvatarPicker from '../../../components/AvatarPicker/AvatarPicker';
 import CustomButton from '../../../components/CustomButton/CustomButton';
 import MyContext from '../Context';
-import { COLORS } from '../../../configs/configs';
+import { COLORS } from '../../../configs/constants';
 
 const Step3 = () => {
-  const {avatarSource, setAvatarSource, setStep, logInformation} = useContext(MyContext);
+  const { user, setUser, setStep } = useContext(MyContext);
+  const setAvatarSource = (avatarSource) => {
+    setUser({...user, avatarSource: avatarSource})
+  }
   return (
     <View style={Styles.container}>
-      <AvatarPicker title="Chọn ảnh đại diện" setAvatarSource={setAvatarSource} value={avatarSource}/>
-      <CustomButton title="Xong" style={Styles1.navBtn} onPress={()=>setStep(4)}/>
-      <CustomButton title="Trở về" color={COLORS.dark_green} style={Styles1.navBtn} onPress={()=>setStep(2)}/>
+      <AvatarPicker title="Chọn ảnh đại diện" setAvatarSource={setAvatarSource} value={user.avatarSource} />
+      <CustomButton title="Xong" style={Styles1.navBtn} onPress={() => setStep(4)} disabled={!user.avatarSource}/>
+      <CustomButton title="Trở về" color={COLORS.dark_green} style={Styles1.navBtn} onPress={() => setStep(2)} />
     </View>
   );
 };

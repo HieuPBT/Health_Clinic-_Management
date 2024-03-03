@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { View, Text, TextInput, Button, Alert, ScrollView } from 'react-native';
+import { View, Alert, ScrollView } from 'react-native';
 import Context from '../Context';
 import CustomInput from '../components/CustomInput/CustomInput';
 import CustomDatePicker from '../components/CustomDatePicker/CustomDatePicker';
@@ -7,16 +7,14 @@ import GenderInput from '../components/GenderInput/GenderInput';
 import ValidateInformation from '../utils/Validate';
 import Normalize from '../utils/Normalize';
 import AvatarPicker from '../components/AvatarPicker/AvatarPicker';
-import DateInput from '../components/DateInput/DateInput';
-import DatePicker from 'react-native-datepicker';
-import DateTimePicker from 'react-native-modal-datetime-picker';
 import formatDateToYMD from '../utils/formatDateToYYYYMMDD';
 import CustomButton from '../components/CustomButton/CustomButton';
-import API, { endpoints } from '../configs/API';
+import { authApi, endpoints } from '../configs/API';
 import showSuccessToast from '../utils/ShowSuccessToast';
+import showFailedToast from '../utils/ShowFailedToast';
 
 const UpdateUserInfoScreen = ({ navigation }) => {
-    const { userData, accessToken, setUserData } = useContext(Context);
+    const { userData, accessToken, dispatch, role, setRole } = useContext(Context);
     const [userInfo, setUserInfo] = useState(userData);
     const [editedUserInfo, setEditedUserInfo] = useState({});
 
@@ -31,28 +29,38 @@ const UpdateUserInfoScreen = ({ navigation }) => {
     const handleUpdateUserInfo = async () => {
         try {
             const formData = new FormData();
-
-            // Thêm các trường thông tin vào formData
             for (const key in editedUserInfo) {
                 if (key == 'avatar') {
                     formData.append('avatar', {
                         uri: editedUserInfo[key],
-                        type: 'image/jpeg', // Thay đổi type tùy thuộc vào định dạng ảnh
+                        type: 'image/jpeg',
                         name: 'avatar.jpg',
                     });
-                } else
+                } else if (key == 'patient') {
+                    const res = await authApi(accessToken).patch(endpoints['update_profile'], { 'patient': editedUserInfo[key] });
+                    dispatch({
+                        type: "updateInfo",
+                        payload: { ...editedUserInfo }
+                    });
+                    showSuccessToast('Cập nhật thành công mã bảo hiểm y tế')
+                }
+                else
                     formData.append(key, editedUserInfo[key]);
             }
-            console.log(formData)
 
-            // Gửi yêu cầu cập nhật thông tin
-            const res = await API.patch(endpoints['update_profile'], formData, {
+            const response = await authApi(accessToken).patch(endpoints['update_profile'], formData, {
                 headers: {
-                    'Authorization': 'bearer ' + accessToken,
                     'Content-Type': 'multipart/form-data',
                 },
-            });
+            })
 
+            // console.log(response.data)
+
+            dispatch({
+                type: "updateInfo",
+                payload: { ...editedUserInfo }
+            });
+            setRole(role);
             showSuccessToast('Thông báo', 'Thông tin đã được cập nhật thành công.');
 
             // Cập nhật state userInfo
@@ -61,42 +69,19 @@ const UpdateUserInfoScreen = ({ navigation }) => {
                 ...editedUserInfo
             });
 
-            setUserData({
-                ...userInfo,
-                ...editedUserInfo
-            });
 
             // Reset editedUserInfo
             setEditedUserInfo({});
 
-            navigation.navigate('Thông tin người dùng', {changed: true});
+            navigation.navigate('Thông tin người dùng');
 
         } catch (error) {
+            showFailedToast('Có lỗi xảy ra!', 'Vui lòng thử lại sau');
             console.log(error);
+        } finally {
+            navigation.navigate('Thông tin người dùng');
         }
     };
-
-
-    const compareObjects = (obj1, obj2) => {
-        const keys1 = Object.keys(obj1);
-        const keys2 = Object.keys(obj2);
-
-        // Nếu số lượng keys khác nhau, hai đối tượng không bằng nhau
-        if (keys1.length !== keys2.length) {
-            return false;
-        }
-
-        // Lặp qua từng key của obj1
-        for (let key of keys1) {
-            // Nếu obj2 không có key này hoặc giá trị của key này khác nhau giữa obj1 và obj2
-            if (!obj2.hasOwnProperty(key) || obj1[key] !== obj2[key]) {
-                return false;
-            }
-        }
-
-        // Nếu đã lặp qua tất cả các key mà không có sự khác biệt, hai đối tượng là giống nhau
-        return true;
-    }
 
     return (
         <View style={{ flex: 1, padding: 10 }}>
@@ -134,7 +119,7 @@ const UpdateUserInfoScreen = ({ navigation }) => {
                     value={editedUserInfo.address == undefined ? userInfo.address : editedUserInfo.address}
                     onChangeText={(text) => handleInputChange('address', text)}
                 />
-                <CustomInput
+                {userInfo.patient ? <CustomInput
                     placeholder="Số bảo hiểm y tế"
                     icon="card"
                     value={editedUserInfo.patient == undefined ?
@@ -149,7 +134,7 @@ const UpdateUserInfoScreen = ({ navigation }) => {
                     // }}
                     rightIcon={!(editedUserInfo.patient != undefined ? ValidateInformation.validateInsuranceNumber(editedUserInfo.patient["health_insurance"]) : true) ? 'alert-circle' : null}
                     rightIconColor='red'
-                />
+                /> : null}
                 <CustomDatePicker onChangeDate={(date) => { handleInputChange('date_of_birth', formatDateToYMD(date)) }}
                     value={editedUserInfo.date_of_birth == undefined ? userInfo.date_of_birth : editedUserInfo.date_of_birth} />
                 <GenderInput value={editedUserInfo.gender || userInfo.gender}

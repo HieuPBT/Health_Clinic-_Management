@@ -1,16 +1,18 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import CustomButton from '../../components/CustomButton/CustomButton';
-import { COLORS, afternoonSlots, departmentsDictionary, morningSlots, slots } from '../../configs/configs';
-import API, { endpoints } from '../../configs/API';
+import { COLORS, afternoonSlots, departmentsDictionary, morningSlots, slots } from '../../configs/constants';
+import API, { authApi, endpoints } from '../../configs/API';
 import Context from '../../Context';
 import formatDate from '../../utils/FormatDateFromYMD';
 import TopTab from '../../components/TopTab/TopTab';
 import Normalize from '../../utils/Normalize';
+import showSuccessToast from '../../utils/ShowSuccessToast';
+import showFailedToast from '../../utils/ShowFailedToast';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const AllAppointmentScreen = ({ route, navigation }) => {
     const { accessToken } = useContext(Context);
-    const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedTab, setSelectedTab] = useState(1);
     const [pages, setPages] = useState({
@@ -30,22 +32,47 @@ const AllAppointmentScreen = ({ route, navigation }) => {
         6: [],
     });
 
+    const handleRefresh = () => {
+        setPages({
+            1: 1,
+            2: 1,
+            3: 1,
+            4: 1,
+            5: 1,
+            6: 1,
+        });
+        setAppointmentsByTab({
+            1: [],
+            2: [],
+            3: [],
+            4: [],
+            5: [],
+            6: [],
+        });
+        loadAppointments();
+    }
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={handleRefresh}>
+                    <Text style={{ marginRight: 15 }}>
+                        <Icon name={'refresh'} size={28} />
+                    </Text>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
+
 
     const cancelAppointment = async (id) => {
         try {
-            const res = await API.patch(
+            const res = await authApi(accessToken).patch(
                 endpoints['cancel_appointment'](id),
-                null, // Thân yêu cầu trống vì không có dữ liệu được gửi cùng yêu cầu PATCH
-                {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                }
+                null
             );
 
             if (res.status === 200) {
                 showSuccessToast(`Hủy thành công lịch hẹn ${id}!`);
-                setAppointments(prevAppointments => prevAppointments.filter(appointment => appointment.id !== id));
             }
         } catch (err) {
             console.log(err);
@@ -63,13 +90,8 @@ const AllAppointmentScreen = ({ route, navigation }) => {
             return;
         }
         try {
-            const response = await API.get(`${endpoints['my_appointment']}?page=${page}&${getQueryParams(tab)}`, {
-                headers: {
-                    Authorization: 'Bearer ' + accessToken
-                }
-            });
+            const response = await authApi(accessToken).get(`${endpoints['my_appointment']}?page=${page}&${getQueryParams(tab)}`);
             const newAppointments = response.data.results;
-            setAppointments([...appointments, ...newAppointments]);
             setAppointmentsByTab({
                 ...appointmentsByTab,
                 [tab]: [...appointmentsByTab[tab], ...newAppointments]
@@ -111,6 +133,9 @@ const AllAppointmentScreen = ({ route, navigation }) => {
     };
 
     const renderItem = ({ item }) => {
+        if (!item) {
+            return null; // Bỏ qua việc hiển thị nếu item không tồn tại
+        }
         const handleCancelAppointment = (id) => {
             Alert.alert(
                 'Xác nhận hủy lịch hẹn',
@@ -132,23 +157,26 @@ const AllAppointmentScreen = ({ route, navigation }) => {
         };
 
         const handleResetAppointment = (appointmentInfo) => {
-            navigation.navigate('Đặt Lịch Khám')
+            navigation.navigate('Đặt lịch khám')
         };
 
         const renderButton = () => {
-            if (item['status'] == "ĐÃ HUỶ") {
-                return (
-                    <CustomButton title={"Đặt lại"} color={COLORS.green_primary} fsize={17} onPress={() => handleResetAppointment(item)} />
-                );
-            } else if (item['status'] == "ĐÃ THANH TOÁN") {
-                return (
-                    <CustomButton title={"Xem bill"} color={"#3366ff"} fsize={17} onPress={() => handleViewBill(item.id)} />
-                );
-            } else if (item['status'] == "CHƯA THANH TOÁN") {
-                return (
-                    <CustomButton title={"Thanh toán"} color={COLORS.green_primary} fsize={17} onPress={() => handlePayment(item.id)} />
-                );
-            } else if (item['status'] == "ĐÃ XÁC NHẬN" || item['status'] == "CHƯA XÁC NHẬN") {
+            // if (item['status'] == "ĐÃ HUỶ") {
+            //     return (
+            //         <CustomButton title={"Đặt lại"} color={COLORS.green_primary} fsize={17} onPress={() => handleResetAppointment(item)} />
+            //     );
+            // }
+            // // else if (item['status'] == "ĐÃ THANH TOÁN") {
+            // //     return (
+            // //         <CustomButton title={"Xem bill"} color={"#3366ff"} fsize={17} onPress={() => handleViewBill(item.id)} />
+            // //     );
+            // // } else if (item['status'] == "CHƯA THANH TOÁN") {
+            // //     return (
+            // //         <CustomButton title={"Thanh toán"} color={COLORS.green_primary} fsize={17} onPress={() => handlePayment(item.id)} />
+            // //     );
+            // // }
+            // else
+            if (item['status'] == "ĐÃ XÁC NHẬN" || item['status'] == "CHƯA XÁC NHẬN") {
                 return (
                     <CustomButton title={"Hủy lịch hẹn"} color={"#b30000"} fsize={17} onPress={() => handleCancelAppointment(item.id)} />
                 );
@@ -157,7 +185,7 @@ const AllAppointmentScreen = ({ route, navigation }) => {
 
         const renderStatus = () => {
             return (
-                <Text style={[styles.itemText, { color: item.status == "ĐÃ XÁC NHẬN" ? 'green' : 'red', alignSelf: 'flex-end' }]}>
+                <Text style={[styles.itemText, { color: item.status == "ĐÃ XÁC NHẬN" || item.status == "ĐÃ THANH TOÁN" ? 'green' : 'red', alignSelf: 'flex-end' }]}>
                     {Normalize.capitalizeFirstLetter(item.status)}
                 </Text>
             )

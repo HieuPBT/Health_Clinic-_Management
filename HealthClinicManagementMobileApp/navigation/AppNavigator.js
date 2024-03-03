@@ -7,7 +7,6 @@ import AppointmentScreen from '../screens/AppointmentScreen/AppointmentScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AllAppointmentScreen from '../screens/AllAppointmentScreen/AllAppointmentScreen';
 import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
-import Context from '../Context';
 import ArticleList from '../components/ArticleList/ArticleList';
 import UserProfileNavigator from './UserProfileNavigator';
 
@@ -16,16 +15,15 @@ import UserProfileNavigator from './UserProfileNavigator';
 const Tab = createBottomTabNavigator();
 
 const AppNavigator = () => {
-  const { userData } = useContext(Context);
   return (
     <Tab.Navigator >
-      <Tab.Screen name="Trang Chủ" component={HomeScreen} options={{
+      <Tab.Screen name="Trang chủ" component={HomeScreen} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="home" color={color} size={size} />
         ),
         tabBarButton: CustomTabButton,
       }} />
-      <Tab.Screen name="Đặt Lịch Khám" component={AppointmentScreen} options={{
+      <Tab.Screen name="Đặt lịch khám" component={AppointmentScreen} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="calendar" color={color} size={size} />
         ),
@@ -37,7 +35,7 @@ const AppNavigator = () => {
         ),
         tabBarButton: CustomTabButton
       }} />
-      <Tab.Screen name="Tài Khoản" component={UserProfileNavigator} options={{
+      <Tab.Screen name="Tài khoản" component={UserProfileNavigator} options={{
         tabBarIcon: ({ color, size }) => (
           <Icon name="person" color={color} size={size} />
         ),

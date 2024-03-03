@@ -3,37 +3,23 @@ import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
 import Context from '../Context';
 import formatDate from '../utils/FormatDateFromYMD';
-import API, { endpoints } from '../configs/API';
-import { NavigationContainer } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const renderItem = () => {
-  return (
-    <>
-
-    </>
-  )
-}
-
 const UserProfileScreen = ({ preview = false, userId, userDataParam, route }) => {
-  const { setAuthenticated, accessToken, setUserData, userData, role } = useContext(Context);
-  const [userDataToRender, setUserDataToRender] = useState();
+  const { setAuthenticated, accessToken, userData, role } = useContext(Context);
+  const changed = route?.params?.changed;
+  const [userDataToRender, setUserDataToRender] = useState(userData || userDataParam);
+  useEffect(() => {
+    setUserDataToRender(userData);
+  }, [userData]);
   useEffect(() => {
     if (!preview) {
       setUserDataToRender(userData);
     } else {
-      console.log(userDataParam)
       setUserDataToRender(userDataParam);
     }
+  }, [accessToken, userDataParam])
 
-  }, [accessToken])
-  console.log(userDataToRender)
-
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem('access_token');
-    await AsyncStorage.removeItem('refresh_token');
-    setAuthenticated(false);
-  }
 
   return (
     <>
@@ -70,7 +56,6 @@ const UserProfileScreen = ({ preview = false, userId, userDataParam, route }) =>
             <Text style={styles.value}>{userDataToRender['address']}</Text>
           </View>
         </View>
-        {!preview && role != 'PATIENT' ? <CustomButton title="Đăng xuất" style={{}} onPress={handleLogout} /> : null}
       </View> : <ActivityIndicator />}
     </>
   );

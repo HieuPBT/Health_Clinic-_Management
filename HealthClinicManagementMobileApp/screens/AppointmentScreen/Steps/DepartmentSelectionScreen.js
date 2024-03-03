@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import CustomButton from '../../../components/CustomButton/CustomButton';
 import AppointmentContext from '../Context';
-import { departments } from '../../../configs/configs';
+import { departments } from '../../../configs/constants';
 
 const DepartmentSelectionScreen = ({ isEditing = false }) => {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
@@ -19,7 +19,7 @@ const DepartmentSelectionScreen = ({ isEditing = false }) => {
   }
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.departmentItem} onPress={() => handleDepartmentSelect(item)}>
+    <TouchableOpacity style={[styles.departmentItem, item === selectedDepartment ? styles.selectedDepartment : null]} onPress={() => handleDepartmentSelect(item)}>
       <Text>{item.nameDisplay}</Text>
     </TouchableOpacity>
   );
@@ -32,9 +32,9 @@ const DepartmentSelectionScreen = ({ isEditing = false }) => {
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
       />
-      <Text style={styles.selectedDepartment}>
+      {/* <Text style={styles.selectedDepartment}>
         {selectedDepartment ? selectedDepartment.nameDisplay : 'Chưa chọn'}
-      </Text>
+      </Text> */}
       {isEditing ? <CustomButton title="Sửa xong" disabled={!selectedDepartment} onPress={() => { setStep(4); handleConfirmationSelect() }} /> : <CustomButton title="Tiếp" disabled={!selectedDepartment} onPress={handleConfirmationSelect} />}
     </View>
   );
@@ -54,11 +54,11 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderBottomWidth: 1.5,
     borderBottomColor: '#ccc',
-    borderStyle: 'dashed'
+    borderStyle: 'dashed',
+    paddingHorizontal: 10
   },
   selectedDepartment: {
-    marginVertical: 20,
-    fontSize: 18,
+    backgroundColor: 'lightblue'
   },
 });
 

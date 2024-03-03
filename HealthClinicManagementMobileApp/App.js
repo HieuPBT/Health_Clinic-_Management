@@ -1,36 +1,35 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native'; // Thêm import ActivityIndicator
 import { NavigationContainer } from '@react-navigation/native';
 import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
 import NurseAppNavigator from './navigation/NurseAppNavigator';
 import DoctorAppNavigator from './navigation/DoctorAppNavigator';
-import API, { endpoints } from './configs/API';
+import API, { authApi, endpoints } from './configs/API';
 import Toast from 'react-native-toast-message';
-import { client_id, client_secret, toastConfig } from './configs/configs';
+import { client_id, client_secret, toastConfig } from './configs/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Context from './Context';
+import MyUserReducer from './Reducers/MyUserReducer';
 
 export default function App() {
   const [accessToken, setAccesstoken] = useState();
   const [role, setRole] = useState('PATIENT');
-  const [userData, setUserData] = useState({});
+  const [userData, dispatch] = useReducer(MyUserReducer, null);
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true); // Thêm trạng thái loading
 
   const isAuthenticated = async () => {
     const access_token = await AsyncStorage.getItem('access_token');
     const refresh_token = await AsyncStorage.getItem('refresh_token');
-    console.log(access_token, refresh_token);
     try {
-      const res = await API.get(endpoints['profile'], {
-        headers: {
-          'Authorization': 'bearer ' + access_token
-        }
-      });
+      const res = await authApi(access_token).get(endpoints['profile']);
       setAccesstoken(access_token);
-      setUserData(res.data);
+      dispatch({
+        type: "login",
+        payload: { ...res.data }
+      })
       setRole(res.data.role);
       return true;
     } catch (error) {
@@ -59,6 +58,12 @@ export default function App() {
       await AsyncStorage.setItem('access_token', newAccessToken);
       await AsyncStorage.setItem('refresh_token', newRefreshToken);
       setAccesstoken(newAccessToken);
+      const response = await authApi(newAccessToken).get(endpoints['profile']);
+      dispatch({
+        type: "login",
+        payload: { ...response.data }
+      })
+      setRole(response.data.role);
       return true;
     } catch (error) {
       console.log('Error refresh access token:', error);
@@ -85,7 +90,7 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Context.Provider value={{ authenticated, setAuthenticated, setRole, setAccesstoken, userData, setUserData, accessToken, role }}>
+      <Context.Provider value={{ authenticated, setAuthenticated, setRole, setAccesstoken, userData, dispatch, accessToken, role }}>
         {role === 'PATIENT' && authenticated ? <AppNavigator /> : authenticated && role === 'NURSE' ? <NurseAppNavigator /> : authenticated && role === 'DOCTOR' ? <DoctorAppNavigator /> : <AuthNavigator />}
         <Toast />
       </Context.Provider>

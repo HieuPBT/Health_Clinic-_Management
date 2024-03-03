@@ -54,8 +54,6 @@ const AppointmentConfirmationScreen = () => {
           <Icon name='pencil' size={24}/>
         </TouchableOpacity>
       </View>
-
-      {/* Thêm các thông tin khác tại đây */}
     </View>
   );
 };

@@ -1,5 +1,4 @@
-// navigation/AppNavigator.js
-import React, { useContext } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import ConfirmAppointmentScreen from '../NurseScreens/ConfirmAppointmentScreen';
@@ -9,6 +8,9 @@ import InvoiceScreen from '../NurseScreens/InvoiceScreen';
 import CustomTabButton from '../components/CustomBarButton/CustomBarButton';
 import ArticleList from '../components/ArticleList/ArticleList';
 import PaymentScreen from '../NurseScreens/PaymentScreen';
+import MomoQRCode from '../components/MomoQRCode/MomoQRCode';
+import ZaloPayQRCode from '../components/ZaloPayQRCode/ZaloPayQRCode';
+import UserProfileNavigator from './UserProfileNavigator';
 
 
 
@@ -34,13 +36,17 @@ const NurseAppNavigator = () => {
 				),
 				tabBarButton: CustomTabButton
 			}} />
-			<Tab.Screen name="Tài Khoản" component={UserProfileScreen} options={{
-				tabBarIcon: ({ color, size }) => (
-					<Icon name="person" color={color} size={size} />
-				),
-				tabBarButton: CustomTabButton
-			}} />
 			<Tab.Screen name="Thanh toán" component={PaymentScreen} options={{
+				tabBarItemStyle: {
+					display: 'none'
+				}
+			}} />
+			<Tab.Screen name="Thanh toán Momo" component={MomoQRCode} options={{
+				tabBarItemStyle: {
+					display: 'none'
+				}
+			}} />
+			<Tab.Screen name="Thanh toán ZaloPay" component={ZaloPayQRCode} options={{
 				tabBarItemStyle: {
 					display: 'none'
 				}
@@ -49,6 +55,13 @@ const NurseAppNavigator = () => {
 				tabBarItemStyle: {
 					display: 'none'
 				}
+			}} />
+			<Tab.Screen name="Tài khoản" component={UserProfileNavigator} options={{
+				tabBarIcon: ({ color, size }) => (
+					<Icon name="person" color={color} size={size} />
+				),
+				tabBarButton: CustomTabButton,
+				headerShown: false
 			}} />
 		</Tab.Navigator>
 	);

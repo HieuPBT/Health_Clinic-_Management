@@ -1,7 +1,5 @@
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import InvoiceScreen from '../NurseScreens/InvoiceScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
-import HomeScreen from '../screens/HomeScreen';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import UpdateUserInfoScreen from '../screens/UpdateUserInfoScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
@@ -13,8 +11,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 const Drawer = createDrawerNavigator();
 
 const UserProfileNavigator = () => {
-    const { setAuthenticated } = useContext(Context);
+    const { setAuthenticated, dispatch, setRole } = useContext(Context);
     const handleLogout = async () => {
+        dispatch({
+            "type": "logout"
+        });
+        setRole(null);
         await AsyncStorage.removeItem('access_token');
         await AsyncStorage.removeItem('refresh_token');
         setAuthenticated(false);
@@ -54,7 +56,6 @@ const UserProfileNavigator = () => {
         <Drawer.Navigator drawerContent={CustomDrawerContent}>
             <Drawer.Screen name="Thông tin người dùng" component={UserProfileScreen} />
             <Drawer.Screen name="Đổi mật khẩu" component={ChangePasswordScreen} />
-            {/* <Drawer.Screen name="Đăng xuất" component={UserProfileScreen} /> */}
             <Drawer.Screen name="Cập nhật thông tin cá nhân" component={UpdateUserInfoScreen} />
         </Drawer.Navigator>
     );

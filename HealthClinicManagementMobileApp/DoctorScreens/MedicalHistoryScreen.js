@@ -1,51 +1,98 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import API, { endpoints } from '../configs/API';
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import API, { authApi, endpoints } from '../configs/API';
 import Context from '../Context';
 import formatDate from '../utils/FormatDateFromYMD';
-import CustomButton from '../components/CustomButton/CustomButton';
+import FooterLoading from '../components/FooterLoading/FooterLoading';
+import RefreshButton from '../components/RefreshButton/RefreshButton';
 
-const MedicalHistoryScreen = ({ patientID, isChanged, navigation }) => {
-    const { accessToken } = useContext(Context);
+const MedicalHistoryScreen = ({ route, navigation }) => {
+    const { accessToken, role } = useContext(Context);
+    const { email, startDate, endDate } = route.params;
     const [medicalHistories, setMedicalHistories] = useState([]);
-    console.log(patientID)
-    const loadPrescription = async () => {
-        try {
-            const response = await API.get(endpoints['medical_history'](patientID), {
-                headers: {
-                    Authorization: 'Bearer ' + accessToken
-                }
-            });
-            if (response.status == 200) {
-                setMedicalHistories(response.data.results);
-            }
-        } catch (err) {
-            console.log(err);
-        }
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
 
-    }
+
+
+    const loadPrescription = async () => {
+        setLoading(true);
+        if (!(startDate && endDate)) {
+            try {
+                const response = await authApi(accessToken).get(`${endpoints['medical_history'](email)}&page=${page}`);
+                if (response.data.next == null) {
+                    setPage(null);
+                } else {
+                    setPage(page + 1);
+                }
+                setMedicalHistories([...medicalHistories, ...response.data.results]);
+            } catch (err) {
+                console.log(err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        else {
+            try {
+                const response = await authApi(accessToken).get(`${endpoints['medical_history_date_filter'](email, startDate, endDate)}&page=${page}`);
+                console.log(email, startDate, endDate)
+                if (response.data.next == null) {
+                    setPage(null);
+                } else {
+                    setPage(page + 1);
+                }
+                setMedicalHistories([...medicalHistories, ...response.data.results]);
+            } catch (err) {
+                console.log(err);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+
     useEffect(() => {
-        loadPrescription()
-    }, [patientID])
+        setPage(1);
+        setMedicalHistories([]);
+        loadPrescription();
+    }, [email, route.params]);
+
+    const handleRefresh = () => {
+        setPage(1);
+        setMedicalHistories([]);
+        loadPrescription();
+    }
+
+    // useLayoutEffect(() => {
+    //     navigation.setOptions({
+    //         headerRight: () => <RefreshButton callback={handleRefresh} />,
+    //     });
+    // }, [navigation]);
 
     const handleRecordPress = (record) => {
-        navigation.navigate('ViewMedicalHistoryDetails', { MedicalHistoryData: record, patientID: patientID});
+        navigation.navigate('ViewMedicalHistoryDetails', { MedicalHistoryData: record, email: email, navigation: navigation });
     };
+
+    const renderItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.recordContainer}
+            onPress={() => handleRecordPress(item)}>
+            <Text style={styles.recordDate}>{formatDate(item.created_date)}</Text>
+            <Text style={styles.recordDiagnosis}>Triệu chứng: {item.description}</Text>
+            <Text style={styles.recordDiagnosis}>Kết luận: {item.conclusion}</Text>
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Lịch sử khám</Text>
-            {medicalHistories.map((record, index) => (
-                <TouchableOpacity
-                    style={styles.recordContainer}
-                    key={index}
-                    onPress={() => handleRecordPress(record)}>
-                    <Text style={styles.recordDate}>{formatDate(record.created_date)}</Text>
-                    <Text style={styles.recordDiagnosis}>Triệu chứng: {record.description}</Text>
-                    <Text style={styles.recordDiagnosis}>Kết luận: {record.conclusion}</Text>
-                </TouchableOpacity>
-            ))}
-            <CustomButton title={"Làm mới"} onPress={loadPrescription} />
+            <FlatList
+                data={medicalHistories}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id.toString()}
+                onEndReached={page !== null ? loadPrescription : null}
+                onEndReachedThreshold={0.1}
+                ListFooterComponent={loading ? () => <FooterLoading /> : null}
+            />
         </View>
     );
 };
@@ -53,7 +100,7 @@ const MedicalHistoryScreen = ({ patientID, isChanged, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        paddingHorizontal: 20,
         backgroundColor: '#fff',
     },
     recordContainer: {

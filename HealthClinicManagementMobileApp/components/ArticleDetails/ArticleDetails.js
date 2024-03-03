@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 
 const ArticleDetails = ({ article }) => {
-    const { width } = Dimensions.get('window');
     return (
         <ScrollView>
             <View style={styles.container}>
@@ -28,7 +27,6 @@ const styles = StyleSheet.create({
     description: {
         fontSize: 18,
         marginBottom: 10,
-        // fontStyle: ''
     },
     content: {
         fontSize: 16,

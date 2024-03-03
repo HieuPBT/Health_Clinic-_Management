@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../../configs/configs';
+import { COLORS } from '../../configs/constants';
 
 
 

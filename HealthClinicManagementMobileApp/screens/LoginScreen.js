@@ -2,13 +2,13 @@ import React, { useContext, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import CustomInput from '../components/CustomInput/CustomInput';
 import CustomButton from '../components/CustomButton/CustomButton';
-import { COLORS, client_id, client_secret } from '../configs/configs';
+import { COLORS, client_id, client_secret } from '../configs/constants';
 import { CheckBox, Image } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 import RegisterScreen from './RegisterScreen/RegisterScreen';
 import Styles from '../styles/Styles';
 import Context from '../Context';
-import API, { endpoints } from '../configs/API';
+import API, { authApi, endpoints } from '../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import showFailedToast from '../utils/ShowFailedToast';
 import showSuccessToast from '../utils/ShowSuccessToast';
@@ -20,7 +20,7 @@ const LoginScreen = ({ navigation }) => {
   const [isKeepLogin, setIsKeepLogin] = useState(true);
   const [textSecure, setTextSecure] = useState(true);
 
-  const { authenticated, setAuthenticated, setRole, setAccesstoken, setUserData, userData } = useContext(Context);
+  const { authenticated, setAuthenticated, setRole, setAccesstoken, userData, dispatch } = useContext(Context);
   const handleLogin = async () => {
     try {
       const formData = new FormData();
@@ -45,22 +45,22 @@ const LoginScreen = ({ navigation }) => {
 
       showSuccessToast('Đăng nhập thành công');
       loadUser = async () => {
-        const res = await API.get(endpoints['profile'], {
-          headers: {
-            'Authorization': 'bearer ' + accessToken
-          }
-        });
-        setUserData(res.data);
+        const res = await authApi(accessToken).get(endpoints['profile']);
+        dispatch({
+          type: "login",
+          payload: { ...res.data }
+        })
         setRole(res.data.role);
-        console.log(userData)
       }
       loadUser();
     } catch (ex) {
       console.info(ex);
       if (ex.response.status === 400) {
-        showFailedToast('Sai tài khoản hoặc mật khẩu');
+        showFailedToast('Sai tài khoản hoặc mật khẩu', 'Hoặc tài khoản chưa được kích hoạt');
       } else if (ex.response.status == 401) {
         showFailedToast('Email chưa được xác thực', 'Vui lòng kiểm tra email để xác thực');
+      } else {
+        showFailedToast('Server đang bảo trì', 'Vui lòng đăng nhập lại sau');
       }
     }
   };
@@ -86,7 +86,7 @@ const LoginScreen = ({ navigation }) => {
         rightIconPressOutHandler={() => { setTextSecure(true) }}
       />
       <View style={styles.row_container}>
-        <TouchableOpacity onPress={()=>{navigation.navigate('Quên mật khẩu')}}>
+        <TouchableOpacity onPress={() => { navigation.navigate('Quên mật khẩu') }}>
           <Text>Quên mật khẩu?</Text>
         </TouchableOpacity>
         <View style={styles.checkboxContainer}>

@@ -1,13 +1,20 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, LogBox } from 'react-native';
 import CustomButton from '../components/CustomButton/CustomButton';
-import { COLORS } from '../configs/configs';
+import { COLORS } from '../configs/constants';
 import Context from '../Context';
-import API, { endpoints } from '../configs/API';
+import API, { authApi, endpoints } from '../configs/API';
 import { ActivityIndicator } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import formatDate from '../utils/FormatDateFromYMD';
+import cutLast3Chars from '../utils/cutLast3Chars';
 
-const InvoiceScreen = ({navigation}) => {
-    const {accessToken} = useContext(Context);
+LogBox.ignoreLogs([
+    'Non-serializable values were found in the navigation state',
+]);
+
+const InvoiceScreen = ({ navigation }) => {
+    const { accessToken } = useContext(Context);
     const [prescriptions, setPrescriptions] = useState([]);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -16,25 +23,31 @@ const InvoiceScreen = ({navigation}) => {
         if (page !== null) {
             setLoading(true);
             try {
-                const response = await API.get(`${endpoints['my_appointment']}?page=${page}`, {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                });
+                const response = await authApi(accessToken).get(`${endpoints['today_prescription']}?page=${page}`);
+                if (response.data.next == null) {
+                    setPage(null);
+                } else {
+                    setPage(page + 1);
+                }
                 setPrescriptions([...prescriptions, ...response.data.results]);
-                console.log(prescriptions)
-                setPage(page + 1);
             } catch (error) {
                 console.log('Error fetching:', error);
-                if (error.response.status === 404) {
-                    setPage(null);
-                }
             } finally {
                 setLoading(false);
             }
         }
     };
-
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={handleRefresh}>
+                    <Text style={{ marginRight: 15 }}>
+                        <Icon name={'refresh'} size={28} />
+                    </Text>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
 
     useEffect(() => {
         setPrescriptions([]);
@@ -42,7 +55,6 @@ const InvoiceScreen = ({navigation}) => {
         setPage(1);
     }, [accessToken]);
 
-    // Hàm để hiển thị activity indicator khi đang tải dữ liệu
     const renderFooter = () => {
         return loading ? <ActivityIndicator size="large" color="#0000ff" /> : null;
     };
@@ -51,18 +63,42 @@ const InvoiceScreen = ({navigation}) => {
         setPrescriptions(prevPrescription => prevPrescription.filter(prescription => prescription.id !== id));
     };
 
+    const handleRefresh = () => {
+        setPage(1);
+        setPrescriptions([]);
+        loadPrescription();
+    }
+
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
             <View style={styles.row}>
-                <Text style={styles.itemText}>Cuộc hẹn: {item.appointment}</Text>
+                <Text style={styles.itemText}>Cuộc hẹn: {item.appointment.id}</Text>
+                <Text style={styles.itemText}>Khoa: {item.appointment.department}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.itemText}>Bệnh nhân: {item.appointment.patient.id}</Text>
+                <Text style={styles.itemText}>{item.appointment.patient.full_name}</Text>
+            </View>
+            <Text style={styles.itemText}>Email: {item.appointment.patient.email}</Text>
+            <View style={styles.row}>
+                <Text style={styles.itemText}>Ngày khám: {formatDate(item.appointment.booking_date)}</Text>
+                <Text style={styles.itemText}>Giờ khám: {cutLast3Chars(item.appointment.booking_time)}</Text>
             </View>
             <View style={styles.row}>
                 <Text style={styles.itemText}>Triệu chứng: {item.description}</Text>
             </View>
             <View style={styles.row}>
                 <Text style={styles.itemText}>Kết luận: {item.conclusion}</Text>
+                <Text style={[styles.itemText, { color: COLORS.green }]}> Khám xong</Text>
             </View>
-            <CustomButton title="Xuất hóa đơn" onPress={() => navigation.navigate('Thanh toán')} />
+            <CustomButton title="Xuất hóa đơn" onPress={() =>
+                navigation.navigate('Thanh toán', {
+                    prescriptionId: item.id,
+                    isHasMedicineList: item.medicine_list.length > 0,
+                    appointmentId: item.appointment.id,
+                    onSuccess: () => invoice(item.id)
+                })
+            } />
         </View>
     );
 
@@ -85,6 +121,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: 20,
+        paddingVertical: 10
     },
     itemContainer: {
         marginBottom: 20,
@@ -106,6 +143,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between'
     }
 });
 

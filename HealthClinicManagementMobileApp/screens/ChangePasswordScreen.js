@@ -4,7 +4,7 @@ import axios from 'axios'; // Import thư viện Axios
 import CustomInput from '../components/CustomInput/CustomInput';
 import CustomButton from '../components/CustomButton/CustomButton';
 import ValidateInformation from '../utils/Validate';
-import API, { endpoints } from '../configs/API';
+import API, { authApi, endpoints } from '../configs/API';
 import Context from '../Context';
 import showSuccessToast from '../utils/ShowSuccessToast';
 import showFailedToast from '../utils/ShowFailedToast';
@@ -33,14 +33,10 @@ const ChangePasswordScreen = () => {
 
         // Gửi yêu cầu đổi mật khẩu đến máy chủ bằng Axios
         try {
-            const response = await API.patch(endpoints['update_password'], {
+            const response = await authApi(accessToken).patch(endpoints['update_password'], {
                 'old_password': oldPassword,
                 'new_password': newPassword,
-            }, {
-                headers: {
-                    Authorization: 'Bearer ' + accessToken
-                }
-            });
+            })
 
             if (response.status === 200) {
                 showSuccessToast('Thành công', 'Đổi mật khẩu thành công');

@@ -2,9 +2,9 @@ import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import AppointmentContext from '../Context';
 import CustomButton from '../../../components/CustomButton/CustomButton';
-import { COLORS, afternoonSlots, morningSlots } from '../../../configs/configs';
+import { COLORS, afternoonSlots, morningSlots } from '../../../configs/constants';
 import Context from '../../../Context';
-import API, { endpoints } from '../../../configs/API';
+import { authApi, endpoints } from '../../../configs/API';
 
 const AppointmentTimePickerScreen = ({ isEditing = false }) => {
     const { accessToken } = useContext(Context);
@@ -26,11 +26,7 @@ const AppointmentTimePickerScreen = ({ isEditing = false }) => {
     useEffect(() => {
         const loadEnabledSlots = async () => {
             try {
-                const res = await API.get(endpoints['available_times'](date, department.name), {
-                    headers: {
-                        Authorization: 'Bearer ' + accessToken
-                    }
-                })
+                const res = await authApi(accessToken).get(endpoints['available_times'](date, department.name))
                 setEnabledSlots(res.data);
             } catch (err) {
                 console.log(err);

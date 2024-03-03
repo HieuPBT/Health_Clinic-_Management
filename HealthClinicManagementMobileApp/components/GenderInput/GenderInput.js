@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Icon } from 'react-native-elements/dist/icons/Icon';
-import { COLORS } from '../../configs/configs';
+import { COLORS } from '../../configs/constants';
 
 const GenderInput = ({ value, onChange }) => {
   const [selectedGender, setSelectedGender] = useState(value ? value == 'MALE' ? 'Nam' : value == 'FEMALE' ? 'Nữ' : 'Khác' : null);

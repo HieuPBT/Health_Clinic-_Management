@@ -5,11 +5,10 @@ import Context from '../Context';
 import { SwiperFlatList } from 'react-native-swiper-flatlist';
 import ArticleList from '../components/ArticleList/ArticleList';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { COLORS } from '../configs/configs';
+import { COLORS } from '../configs/constants';
 // import Styles from '../styles/Styles';
 const HomeScreen = ({ navigation }) => {
   const { setAuthenticated, role } = useContext(Context)
-  console.log(role);
   return (
     <>
       <View style={styles.container}>
@@ -19,7 +18,7 @@ const HomeScreen = ({ navigation }) => {
           <Image source={require('../assets/images/trang-thiet-bi.png')} style={{ width: width, aspectRatio: 16 / 9 }} />
           {
             role == 'PATIENT' ?
-              <TouchableOpacity onPress={() => { navigation.navigate('Đặt Lịch Khám') }} style={{width: width, aspectRatio: 16/9}}>
+              <TouchableOpacity onPress={() => { navigation.navigate('Đặt lịch khám') }} style={{width: width, aspectRatio: 16/9}}>
                 <Image source={require('../assets/images/dat-lich-ngay.png')}  style={{ width: '100%', height: '100%', resizeMode: 'cover' }} onPress={() => { navigation.navigate('Đặt Lịch Khám') }} />
               </TouchableOpacity> :
               null

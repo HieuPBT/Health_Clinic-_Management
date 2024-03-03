@@ -3,7 +3,7 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollVi
 import Icon from 'react-native-vector-icons/Ionicons';
 import CustomButton from '../../components/CustomButton/CustomButton';
 import Context from '../../Context';
-import API, { endpoints } from '../../configs/API';
+import API, { authApi, endpoints } from '../../configs/API';
 import showSuccessToast from '../../utils/ShowSuccessToast';
 import showFailedToast from '../../utils/ShowFailedToast';
 
@@ -80,21 +80,17 @@ const PrescriptionScreen = ({ route, navigation }) => {
             "medicine_list": medicinesToPost
         }
         try {
-            const res = await API.post(endpoints['prescriptions'], data, {
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken
-                }
-            })
+            const res = await authApi(accessToken).post(endpoints['prescriptions'], data)
 
             if (res.status === 201) {
                 showSuccessToast(`Kê toa thành công! Lịch hẹn ${appointment}`);
-                navigation.navigate('Kê toa')
                 onSuccess();
+                navigation.navigate('Kê toa')
             }
         } catch (err) {
             console.log(err);
             showFailedToast('Kê toa thất bại');
-            setPrescriptionSuccess(false); // Cập nhật biến isPrescriptionSuccess khi kê toa thất bại
+            setPrescriptionSuccess(false);
         }
     }
 

@@ -4,7 +4,7 @@ import ArticleItem from '../ArticleItem/ArticleItem';
 import ArticleDetails from '../ArticleDetails/ArticleDetails';
 import CustomButton from '../CustomButton/CustomButton';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { COLORS } from '../../configs/configs';
+import { COLORS } from '../../configs/constants';
 
 const ArticleList = () => {
     const [loading, setLoading] = useState(true);

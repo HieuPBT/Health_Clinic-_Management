@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { COLORS } from '../../configs/configs';
+import { COLORS } from '../../configs/constants';
 
 const ArticleItem = ({ article, onPress }) => {
   return (

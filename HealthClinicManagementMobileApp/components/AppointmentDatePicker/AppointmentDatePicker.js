@@ -5,7 +5,7 @@ import CustomButton from '../CustomButton/CustomButton';
 import { Text } from 'react-native-elements';
 import formatDate from '../../utils/FormatDate';
 import Context from '../../Context';
-import API, { endpoints } from '../../configs/API';
+import API, { authApi, endpoints } from '../../configs/API';
 
 // const fullDate = {
 //     '2024-02-15': { "selected": true, "selectedColor": "#999", disabled: true },
@@ -31,7 +31,7 @@ const AppointmentDatePicker = ({ setDate, btnTitle = "Xác nhận", handleConfir
     convertToFullDateArray = (inputArray) => {
         const fullDate = {};
         inputArray.forEach(item => {
-            if (item.count > 3)
+            if (item.count >= 5)
                 fullDate[item.date] = {
                     "selected": true, // Dùng true nếu muốn chọn ngày
                     "selectedColor": "#999", // Màu khi ngày được chọn
@@ -43,11 +43,7 @@ const AppointmentDatePicker = ({ setDate, btnTitle = "Xác nhận", handleConfir
     useEffect(() => {
         loadCountFullDate = async () => {
             try {
-                const res = await API.get(endpoints['appointment_count'], {
-                    headers: {
-                        Authorization: 'Bearer ' + accessToken,
-                    }
-                });
+                const res = await authApi(accessToken).get(endpoints['appointment_count']);
                 setFullDate(convertToFullDateArray(res.data));
             } catch (e) {
                 console.log(e);

@@ -6,7 +6,9 @@ export const COLORS = {
     text_color: '#333333',
     light_green: '#90EE90',
     cherry_red: '#b30000',
-    green: '#4caf50'
+    green: '#4caf50',
+    momo: '#af206f',
+    zalo: '#0068ff'
 };
 
 export const toastConfig = {

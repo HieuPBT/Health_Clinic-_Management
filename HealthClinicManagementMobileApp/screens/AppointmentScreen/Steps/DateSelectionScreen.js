@@ -4,7 +4,7 @@ import AppointmentContext from "../Context";
 import CustomButton from "../../../components/CustomButton/CustomButton";
 import { View } from "react-native";
 import Styles from "../../../styles/Styles";
-import { COLORS } from "../../../configs/configs";
+import { COLORS } from "../../../configs/constants";
 
 const DateSelectionScreen = ({isEditing = false}) => {
     const {setStep, setDate} = useContext(AppointmentContext);
