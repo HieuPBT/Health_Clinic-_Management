@@ -35,6 +35,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
+CLOUDINARY_BASE_URL = 'https://res.cloudinary.com/dp3f0rnqh/%s'
 
 cloudinary.config(
   cloud_name = "dp3f0rnqh",
@@ -50,9 +51,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'healthclinic.apps.HealthclinicConfig',
+    'rest_framework',
+    'cloudinary',
+    'drf_yasg',
+    'oauth2_provider',
+    'debug_toolbar',
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -61,9 +67,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'healthclinicapp.urls'
+
+INTERNAL_IPS = [
+    '127.0.0.1'
+]
 
 TEMPLATES = [
     {
@@ -83,14 +94,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'healthclinicapp.wsgi.application'
 
-
+import pymysql
+pymysql.install_as_MySQLdb()
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'healclinicdb',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'healthclinicdb',
         'USER': 'root',
         'PASSWORD': 'Admin@123',
         'HOST': '' #mặc định local host
@@ -138,3 +150,29 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DATE_FORMAT = "d/m/Y"
+
+
+REST_FRAMEWORK = {
+    # default pagination
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 5,
+    # oauth2
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
+}
+
+CLIENT_ID = 'aOYVnYKtwekNsUau7SSCMmttSkJnH3EDBVJbIGKo'
+
+CLIENT_SECRET = 'fyIrxqcJNOzP4QSBZWg4OtA3ovmjfGV1KR0XuUhlIHTThhT4XiWxkv7mExbxppDyT9U8jVUssGlW9qVOUo3eRovHWpW2eEWjWSnktJHvlfRpJDt7Qokx3AHRSKfNTvbD'
+
+MAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "nxloc2701@gmail.com"
+EMAIL_HOST_PASSWORD = "aimwnbmlhottouep"
+
+SITE_ID=1
