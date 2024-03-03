@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "HealthClinicManagementMobileApp",
+    "slug": "HealthClinicManagementMobileApp",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  },
+  "name": "HealthClinicManagementMobileApp"
+}
