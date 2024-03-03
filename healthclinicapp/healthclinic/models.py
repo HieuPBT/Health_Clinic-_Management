@@ -90,6 +90,9 @@ class Schedule(BaseModel):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    def __str__(self):
+        return self.employee.department
+
 
 class Appointment(BaseModel):
     patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='patient_appointment')

@@ -9,7 +9,7 @@ router = routers.DefaultRouter()
 router.register('user', views.UserViewSet)
 router.register('appointment', views.AppointmentViewSet, basename='appointment')
 router.register('medicine', views.MedicineListViewSet, basename='medicine')
-router.register('prescription', views.PrescriptionViewSet)
+router.register('prescription', views.PrescriptionViewSet, basename='prescription')
 # momo
 router.register('momo', views.MomoViewSet, basename='momo'),
 # zalo

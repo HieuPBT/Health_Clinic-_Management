@@ -1,4 +1,9 @@
 {% extends 'admin/base_site.html' %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Hệ thống Quản Lý Phòng Mạch Tư Lộc Hiếu') }}</a></div>
+{% endblock %}
+
 {% block content %}
 <style>
     .custom-container {
@@ -43,6 +48,8 @@
             margin-bottom: 5px;
         }
 </style>
+
+
 <div class="custom-container">
     <h1 class="custom-heading">THỐNG KÊ SỐ LƯỢNG BỆNH NHÂN ĐẾN KHÁM VÀ DOANH THU</h1>
 
@@ -100,7 +107,7 @@
                 <option value="quarter" {% if period == 'quarter' %} selected {% endif %}>Quý</option>
                 <option value="year" {% if period == 'year' %} selected {% endif %}>Năm</option>
             </select>
-            <button type='submit' value='submit'>Submit</button>
+            <button type='submit' value='submit'>Thống Kê</button>
         </form>
     </div>
 

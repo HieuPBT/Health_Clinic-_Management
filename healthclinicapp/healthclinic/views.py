@@ -1,34 +1,27 @@
-import json
 import string
 from datetime import datetime, timedelta, timezone, time
 import random
-from time import time
 import pytz
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
-from oauth2_provider.contrib.rest_framework import TokenMatchesOASRequirements
 from django.utils.encoding import force_str
-
-from functools import partial
-
-from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import render
-from oauth2_provider.models import RefreshToken
-from rest_framework import viewsets, generics, status, views, parsers, permissions
-from rest_framework.decorators import action, api_view
+from django.http import HttpResponse, JsonResponse
+from rest_framework import viewsets, generics, status, permissions
+from rest_framework.decorators import action
 from healthclinic import perms
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from healthclinic import serializers, paginators, models
+from healthclinic.choices import Status
 from healthclinic.token import account_activation_token
 from healthclinicapp import settings
 
-# momo
+
+# momo - zalopay
 import json
 import urllib.request
 import urllib
@@ -40,6 +33,7 @@ import hashlib
 # Create your views here.
 
 
+# activation link
 def activate(request, uidb64, token):
     User = get_user_model()
     try:
@@ -55,28 +49,6 @@ def activate(request, uidb64, token):
         return HttpResponse('Activation link is invalid!')
 
 
-class AvailableAppointmentListAPIView(APIView):
-    permission_classes = [permissions.AllowAny]  # Cho phép mọi người truy cập API này
-
-    def get(self, request):
-        # Lấy danh sách các lịch hẹn đã được đặt cho một khoa cụ thể trong khoảng thời gian đã xác định
-        current_date = datetime.now().date()
-        thirty_days_from_now = current_date + timedelta(days=30)
-        booked_appointments = models.Appointment.objects.filter(
-            department=self.request.data,
-            booking_date__range=[current_date, thirty_days_from_now]
-        ).exclude(status='ĐÃ HUỶ')  # Lọc các lịch hẹn đã được đặt và không bị hủy
-
-        # Tạo một danh sách của tất cả các thời gian có thể trong khoảng thời gian đã xác định
-        all_appointment_times = [datetime.combine(current_date, time) for time in models.Appointment.TIME_CHOICES]
-
-        # Tạo một danh sách của các thời gian còn khả dụng bằng cách loại bỏ các thời gian đã được đặt
-        available_times = [time for time in all_appointment_times if time not in booked_appointments.values_list('booking_time', flat=True)]
-
-        # Trả về danh sách các thời gian còn khả dụng
-        return Response(available_times)
-
-
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = models.User.objects.all()
     serializer_class = serializers.UserSerializer
@@ -86,7 +58,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         # only allow any when create new user
         if self.action in ['create', 'forgot_password']:
             return [permissions.AllowAny()]
-        return [perms.OwnerAuthenticated()]  # update_profile, get_profile, change_password
+        return [perms.OwnerAuthenticated()] # update_profile, get_profile, change_password
 
     # decorator
     # return current user data
@@ -147,7 +119,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
     queryset = models.Appointment.objects.filter(status='CHƯA XÁC NHẬN')
-    # serializer_class = serializers.AppointmentCreateSerializer
+    #serializer_class = serializers.AppointmentCreateSerializer
     permission_classes = [permissions.DjangoModelPermissions]
     pagination_class = paginators.AppointmentPagination
 
@@ -176,10 +148,10 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         # return lists of today appointments for Doctor
         if self.request.user.role == 'DOCTOR':
             try:
+                # Lấy thông tin bác sĩ đăng nhập
                 doctor = models.Employee.objects.get(user=self.request.user)
-                # Lấy ngày bắt đầu và kết thúc của các ca làm việc
-                doctor_schedules = models.Schedule.objects.filter(employee=doctor).values_list('start_date', 'end_date')
-                doctor_shift_ids = doctor_schedules.values_list('shift__id', flat=True)
+
+                # Lấy thông tin về các ca làm việc của bác sĩ
                 doctor_shifts = models.Shift.objects.filter(schedule__employee=doctor)
 
                 # Lấy thời gian hiện tại
@@ -189,58 +161,72 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
                 # Lấy giờ từ thời gian hiện tại
                 current_time = current_datetime.time()
 
-                # Lấy thời gian bắt đầu và kết thúc của các ca làm việc
-                shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
-
-                time_conditions = Q()
-                for start_time, end_time in shift_times:
-                    time_conditions |= Q(booking_time__range=[start_time, end_time])
-
-                date_conditions = Q()
-                for start_date, end_date in doctor_schedules:
-                    date_conditions |= Q(booking_date__range=[start_date, end_date])
-
+                # Kiểm tra xem thời gian hiện tại có nằm trong bất kỳ ca làm việc nào của bác sĩ không
                 for shift in doctor_shifts:
-                    # Nếu giờ hiện tại nằm trong khoảng thời gian của ca làm việc, trả về danh sách cuộc hẹn chưa được xác nhận
                     if shift.start_time <= current_time <= shift.end_time:
-                        return (models.Appointment.objects.filter(department=doctor.department, status='ĐÃ XÁC NHẬN',
-                                                                  booking_date=current_datetime.date())
+                        # Nếu có, lấy ngày bắt đầu và kết thúc của các ca làm việc
+                        doctor_schedules = models.Schedule.objects.filter(employee=doctor, shift=shift).values_list('start_date', 'end_date')
+                        doctor_shift_ids = doctor_schedules.values_list('shift__id', flat=True)
+
+                        # Lấy thời gian bắt đầu và kết thúc của ca làm việc hiện tại
+                        shift_times = models.Shift.objects.filter(id__in=doctor_shift_ids).values_list('start_time', 'end_time')
+
+                        # Tạo các điều kiện để lọc cuộc hẹn dựa trên thời gian và ngày của các ca làm việc
+                        time_conditions = Q()
+                        for start_time, end_time in shift_times:
+                            time_conditions |= Q(booking_time__range=[start_time, end_time])
+
+                        date_conditions = Q()
+                        for start_date, end_date in doctor_schedules:
+                            date_conditions |= Q(booking_date__range=[start_date, end_date])
+
+                        # Trả về danh sách cuộc hẹn chưa được xác nhận trong ca làm việc hiện tại
+                        return (models.Appointment.objects.filter(department=doctor.department, status='ĐÃ XÁC NHẬN', booking_date=current_datetime.date())
                                 .filter(time_conditions).filter(date_conditions))
 
-                    return models.Appointment.objects.none()
+                # Nếu không nằm trong bất kỳ ca làm việc nào, trả về danh sách rỗng
+                return models.Appointment.objects.none()
 
             except models.Employee.DoesNotExist:
                 return Response(status.HTTP_204_NO_CONTENT)
 
         # return lists of today appointments for Nurse
         if self.request.user.role == 'NURSE':
-            if self.request.user.role == 'NURSE':
-                try:
-                    # Lấy thông tin y tá đăng nhập
-                    nurse = models.Employee.objects.get(user=self.request.user)
-                    nurse_shifts = models.Shift.objects.filter(schedule__employee=nurse)
+            try:
+                # Lấy thông tin y tá đăng nhập
+                nurse = models.Employee.objects.get(user=self.request.user)
+                nurse_shifts = models.Shift.objects.filter(schedule__employee=nurse)
 
-                    # Lấy thời gian hiện tại
-                    bangkok_timezone = pytz.timezone('Asia/Bangkok')
-                    current_datetime = datetime.now().astimezone(bangkok_timezone)
+                # Lấy thời gian hiện tại
+                bangkok_timezone = pytz.timezone('Asia/Bangkok')
+                current_datetime = datetime.now().astimezone(bangkok_timezone)
 
-                    # Lấy giờ từ thời gian hiện tại
-                    current_time = current_datetime.time()
+                # Lấy giờ từ thời gian hiện tại
+                current_time = current_datetime.time()
 
-                    # Kiểm tra xem giờ hiện tại có nằm trong bất kỳ ca làm việc nào của y tá không
-                    for shift in nurse_shifts:
-                        # Nếu giờ hiện tại nằm trong khoảng thời gian của ca làm việc, trả về danh sách cuộc hẹn chưa được xác nhận
-                        if shift.start_time <= current_time <= shift.end_time:
-                            return models.Appointment.objects.filter(status='CHƯA XÁC NHẬN')
+                # Kiểm tra xem giờ hiện tại có nằm trong bất kỳ ca làm việc nào của y tá không
+                for shift in nurse_shifts:
 
-                    # Nếu không nằm trong bất kỳ ca làm việc nào, trả về danh sách rỗng
-                    return models.Appointment.objects.none()
+                    nurse_schedules = models.Schedule.objects.filter(employee=nurse, shift=shift).values_list(
+                        'start_date', 'end_date')
 
-                except models.Employee.DoesNotExist:
-                    return Response(status.HTTP_204_NO_CONTENT)
+                    date_conditions = Q()
+                    for start_date, end_date in nurse_schedules:
+                        date_conditions |= Q(booking_date__range=[start_date, end_date])
+
+                    # Nếu giờ hiện tại nằm trong khoảng thời gian của ca làm việc, trả về danh sách cuộc hẹn chưa được xác nhận
+                    if shift.start_time <= current_time <= shift.end_time:
+                        return models.Appointment.objects.filter(status='CHƯA XÁC NHẬN').filter(date_conditions)
+
+                # Nếu không nằm trong bất kỳ ca làm việc nào, trả về danh sách rỗng
+                return models.Appointment.objects.none()
+
+            except models.Employee.DoesNotExist:
+                return Response(status.HTTP_204_NO_CONTENT)
 
         return models.Appointment.objects.all()
 
+    # trả về các cuộc hẹn của bệnh nhân
     @action(detail=False, methods=['get'], url_path='patient_appointment', url_name='patient_appointment')
     def get_patient_appointment(self, request):
         appointments = models.Appointment.objects.filter(patient=request.user).all()
@@ -257,6 +243,7 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         result_page = paginator.paginate_queryset(appointments, request)
         return paginator.get_paginated_response(serializers.AppointmentSerializer(result_page, many=True, context={'request': request}).data)
 
+    # y tá xác nhận và gửi mail tới bệnh nhân
     @action(detail=True, methods=['patch'], url_path='confirm', url_name='confirm')
     def confirm_appointment(self, request, pk=None):
         try:
@@ -282,6 +269,7 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
 
         return Response({"detail": "Appointmnet confirmed"})
 
+    # bệnh nhân hủy lịch khám
     @action(detail=True, methods=['patch'], url_path='cancel', url_name='cancel')
     def cancel_appointment(self, request, pk=None):
         try:
@@ -303,6 +291,7 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         return Response(serializer.data)
 
 
+# trả về mảng available booking_time cho frontend
 class AppointmentAvailableBookingTime(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -317,7 +306,7 @@ class AppointmentAvailableBookingTime(APIView):
         department = request.query_params.get('department')
         if booking_date and department:
             # If booking_date is provided, filter available booking times based on that date
-            booked_times = models.Appointment.objects.filter(booking_date=booking_date, department=department).values_list('booking_time', flat=True)
+            booked_times = models.Appointment.objects.filter(booking_date=booking_date, department=department, status__ne=Status.CANCELED).values_list('booking_time', flat=True)
             available_booking_times = [time for time in allowed_booking_times if time not in booked_times]
             # If no booking_date is provided, return all available booking times
             return Response(available_booking_times)
@@ -325,6 +314,7 @@ class AppointmentAvailableBookingTime(APIView):
         return Response(status.HTTP_204_NO_CONTENT)
 
 
+# đếm số lượng appointments trong vòng 30days
 class AppointmentCountInNext30DaysAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -347,6 +337,7 @@ class AppointmentCountInNext30DaysAPIView(APIView):
         return Response(counts)
 
 
+# Bác sĩ tìm kiếm thuốc
 class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = models.Medicine.objects.all()
     serializer_class = serializers.MedicineSerializer
@@ -360,6 +351,7 @@ class MedicineListViewSet(viewsets.ViewSet, generics.ListAPIView):
         return queries
 
 
+# Bác sĩ tạo toa thuốc
 class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = models.Prescription.objects.all()
     serializer_class = serializers.PrescriptionSerializer
@@ -380,11 +372,12 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     def get_permissions(self):
         if self.action == 'get_patient_prescription':
-            return [perms.IsDoctor()]
+            return [perms.IsDocotor()]
         if self.action in ['get_today_prescription', 'create_invoice']:
             return [perms.IsNurse()]
         return [permissions.DjangoModelPermissions()]
 
+    # trả về cho Nurse các toa thuốc hôm nay để thanh toán
     @action(detail=False, methods=['get'], url_path='today_prescription', url_name='today_prescription')
     def get_today_prescription(self, request):
         # Lấy thời gian hiện tại
@@ -397,7 +390,7 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
         # Lọc các đơn thuốc mà chưa có hóa đơn tương ứng
         prescriptions_without_invoice = prescriptions_today.exclude(invoice__isnull=False)
 
-        # Sử dụng paginator để phân trang
+        # Sử dụng paginator để phân trang nếu cần
         paginator = paginators.PrescriptionPagination()
         result_page = paginator.paginate_queryset(prescriptions_without_invoice, request)
 
@@ -409,18 +402,23 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
     @action(detail=False, methods=['get'], url_path='patient_prescription', url_name='patient_prescription')
     def get_patient_prescription(self, request):
         p = models.Prescription.objects.all()
-        q = self.request.query_params.get("patient")
+        q = self.request.query_params.get("email")
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get("end_date")
-        if q:
-            p = p.filter(appointment__patient=q)
-        if q and start_date and end_date:
-            p = p.filter(appointment__patient=q).filter(created_date__gte=start_date).filter(created_date__lte=end_date)
         paginator = paginators.PrescriptionPagination()
-        result_page = paginator.paginate_queryset(p, request)
-        return paginator.get_paginated_response(
-            serializers.PrescriptionSerializer(result_page, many=True, context={'request': request}).data)
+        if q:
+            p = p.filter(appointment__patient__email=q)
+            return paginator.get_paginated_response(
+                serializers.PrescriptionSerializer(paginator.paginate_queryset(p, request), many=True, context={'request': request}).data)
+        if q and start_date and end_date:
+            p = p.filter(appointment__patient__email=q).filter(created_date__gte=start_date).filter(created_date__lte=end_date)
+            return paginator.get_paginated_response(
+                serializers.PrescriptionSerializer(paginator.paginate_queryset(p, request), many=True,
+                                                   context={'request': request}).data)
 
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # tạo thanh toán
     @action(detail=True, methods=['post'], url_path='invoice', url_name='prescription_invoice')
     def create_invoice(self, request, pk):
         prescription = self.get_object()
@@ -435,12 +433,13 @@ class PrescriptionViewSet(viewsets.ViewSet, generics.CreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+# Thanh toán MOMO
 class MomoViewSet(viewsets.ViewSet):
     permission_classes = [perms.IsNurse]
 
     @action(detail=False, methods=['post'], url_path='create', url_name='momo_create')
     @csrf_exempt
-    def create_momo_payment(self, request): # tạo đường link thanh toán
+    def create_momo_payment(self, request):
         endpoint = "https://test-payment.momo.vn/v2/gateway/api/create"
         partnerCode = "MOMO"
         accessKey = "F8BBA842ECF85"
@@ -448,7 +447,7 @@ class MomoViewSet(viewsets.ViewSet):
         requestId = str(uuid.uuid4())
         amount = self.request.data.get('total')
         orderId = str(uuid.uuid4())
-        # orderId = total.get('appointment_id')+total.get('user_id')+total.get('booking_date')
+        #orderId = total.get('appointment_id')+total.get('user_id')+total.get('booking_date')
         orderInfo = "pay with MoMo"
         requestType = "captureWallet"
         extraData = ""
@@ -484,8 +483,8 @@ class MomoViewSet(viewsets.ViewSet):
         else:
             return JsonResponse({'error': 'Invalid request method'})
 
-    @csrf_exempt
     @action(detail=False, methods=['post'], url_path='query', url_name='query_momo')
+    @csrf_exempt
     def query_momo_payment(self, request): # kiểm tra giao dịch đã thanh toán?
         endpoint = "https://test-payment.momo.vn/v2/gateway/api/query"
         secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
@@ -517,6 +516,7 @@ class MomoViewSet(viewsets.ViewSet):
             return JsonResponse({'error': 'Invalid request method'})
 
 
+# Thanh toán ZALOPAY
 class ZaloViewSet(viewsets.ViewSet):
     permission_classes = [perms.IsNurse]
 
@@ -530,7 +530,7 @@ class ZaloViewSet(viewsets.ViewSet):
         embeddata = json.dumps({"merchantinfo": "embeddata123"})
         item = json.dumps([{"itemid": "knb", "itemname": "Pham Ba Trung Hieu", "itemprice": 99999, "itemquantity": 1}])
         appuser = "demo"
-        apptime = int(round(time() * 1000))  # thời gian hết hạn thanh toán
+        apptime = int(round(datetime.now().timestamp() * 1000))  # thời gian hết hạn thanh toán
         apptransid = "{:%y%m%d}_{}".format(datetime.today(), uuid.uuid4())
 
         # Lấy dữ liệu từ request của client

@@ -4,9 +4,9 @@ from django.utils.translation import gettext_lazy as _
 
 class Role(models.TextChoices):
     ADMIN = "ADMIN", _("Admin")
-    PATIENT = "PATIENT", _("Patient")
-    DOCTOR = "DOCTOR", _("Doctor")
-    NURSE = "NURSE", _("Nurse")
+    PATIENT = "PATIENT", _("Bệnh Nhân")
+    DOCTOR = "DOCTOR", _("Bác Sĩ")
+    NURSE = "NURSE", _("Y Tá")
 
 
 class Gender(models.TextChoices):

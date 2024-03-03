@@ -148,15 +148,6 @@ class PrescriptionCreateSerializer(serializers.ModelSerializer):
         model = models.Prescription
         fields = ['id', 'appointment', 'description', 'conclusion', 'medicine_list']
 
-    def validate_medicine_list(self, value):
-        medicine_ids = [item['medicine'].id for item in value]
-        medicines_exist = models.Medicine.objects.filter(id__in=medicine_ids).count() == len(medicine_ids)
-
-        if not medicines_exist:
-            raise serializers.ValidationError("One or more medicines do not exist in the database.")
-
-        return value
-
     def create(self, validated_data):
         medicine_list_data = validated_data.pop('prescriptionmedicine_set')
         prescription = models.Prescription.objects.create(**validated_data)
